@@ -23,7 +23,23 @@ function Navbar() {
           ? "/delivery/dashboard"
           : "/";
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // inform backend so availabilityStatus is set to offline
+      const token = user?.token;
+      if (token) {
+        await API.post(
+          "/users/logout",
+          {},
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+      }
+    } catch (err) {
+      console.error("Failed to logout on server", err);
+    }
+
     localStorage.removeItem("userInfo");
     setUser(null);
     navigate("/");

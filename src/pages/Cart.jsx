@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import API from "../api/axios";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { loadRazorpay } from "../utils/loadRazorpay";
+import Login from "./Login";
 
 function Cart() {
   const [cart, setCart] = useState(null);
@@ -181,6 +183,84 @@ function Cart() {
     }
   };
 
+  const handlePayment = async () => {
+    if (!pincode) {
+      window.dispatchEvent(
+        new CustomEvent("appToast", {
+          detail: { message: "Please enter a pincode", type: "error" },
+        }),
+      );
+      return;
+    }
+
+    // 🔥 LOAD RAZORPAY SDK FIRST
+    const sdkLoaded = await loadRazorpay();
+
+    if (!sdkLoaded) {
+      alert("Razorpay SDK failed to load");
+      return;
+    }
+
+    setCheckingOut(true);
+    console.log(appliedCoupon);
+
+    try {
+      // 1️⃣ Create order in DB
+      const checkoutRes = await API.post("/cart/checkout", {
+        pincode,
+        couponCode: appliedCoupon || "",
+      });
+
+      const { orderId, totalAmount } = checkoutRes.data;
+
+      // 2️⃣ Create Razorpay order
+      const rzpOrder = await API.post("/payment/create-order", {
+        amount: totalAmount,
+      });
+
+      const { id, amount, currency } = rzpOrder.data;
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount,
+        currency,
+        order_id: id,
+        name: "Zomato Clone",
+
+        handler: async function (response) {
+          const verifyRes = await API.post("/payment/verify-payment", response);
+
+          if (verifyRes.data.success) {
+            await API.put(`/orders/${orderId}/pay`, {
+              paymentId: response.razorpay_payment_id,
+            });
+
+            alert("Payment Successful 🎉");
+            navigate("/my-orders");
+          }
+        },
+        modal: {
+          ondismiss: async function () {
+            try {
+              await API.delete(`/orders/${orderId}/cancel-pending`);
+            } catch (err) {
+              console.log("Failed to delete pending order", err);
+            }
+
+            setCheckingOut(false);
+          },
+        },
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+    } catch (error) {
+      console.log(error);
+      alert(error.response?.data?.message || "Payment failed");
+      setCheckingOut(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -320,7 +400,6 @@ function Cart() {
               </label>
               <div className="flex gap-2">
                 <input
-                  required
                   placeholder="Coupon code (optional)"
                   value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
@@ -329,7 +408,7 @@ function Cart() {
                 <button
                   type="button"
                   onClick={handleApplyCoupon}
-                  disabled={applying || !couponCode}
+                  // disabled={applying || !couponCode}
                   className="px-4 py-2 rounded-lg border border-red-500 text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
                 >
                   {applying ? "Applying…" : "Apply"}
@@ -364,7 +443,7 @@ function Cart() {
               </span>
             </div>
             <div className="flex justify-between mb-1">
-              <span className="text-gray-600">Delivery</span>
+              <span className="text-gray-600">Delivery Charges</span>
               <span className="font-medium text-gray-900">₹0</span>
             </div>
             <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-200">
@@ -386,7 +465,7 @@ function Cart() {
 
           <button
             type="button"
-            onClick={handleCheckout}
+            onClick={handlePayment}
             disabled={checkingOut}
             className={`w-full text-white font-semibold py-3 rounded-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ${checkingOut ? "bg-red-400 cursor-wait" : "bg-red-600 hover:bg-red-700"}`}
           >
@@ -415,7 +494,7 @@ function Cart() {
                 Placing order...
               </span>
             ) : (
-              "Place order"
+              "Pay & Place Order"
             )}
           </button>
         </div>
