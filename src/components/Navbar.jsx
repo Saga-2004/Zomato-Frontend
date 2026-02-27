@@ -10,6 +10,13 @@ function Navbar() {
     return userInfo ? JSON.parse(userInfo) : null;
   });
   const [cartCount, setCartCount] = useState(0);
+  const [pincode, setPincode] = useState(() => {
+    // initialize from query or localStorage
+    const params = new URLSearchParams(window.location.search);
+    const pin = params.get("pincode");
+    if (pin) return pin;
+    return localStorage.getItem("pincodeFilter") || "";
+  });
   const location = useLocation();
 
   const role = user?.role;
@@ -46,6 +53,18 @@ function Navbar() {
   };
 
   // fetch cart count for customer
+
+  // keep pincode in sync when location changes (e.g. user uses browser back)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const pin = params.get("pincode") || "";
+    setPincode(pin);
+    if (pin) {
+      localStorage.setItem("pincodeFilter", pin);
+    } else {
+      localStorage.removeItem("pincodeFilter");
+    }
+  }, [location.search]);
   const loadCartCount = async () => {
     try {
       const res = await API.get("/cart");
@@ -76,15 +95,46 @@ function Navbar() {
     };
   }, [isCustomer, location]);
 
+  const handlePincodeSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = pincode.trim();
+    if (trimmed) {
+      localStorage.setItem("pincodeFilter", trimmed);
+      navigate(`/?pincode=${encodeURIComponent(trimmed)}`);
+    } else {
+      localStorage.removeItem("pincodeFilter");
+      navigate("/");
+    }
+  };
+
   return (
     <nav className="bg-red-600 text-white shadow-md">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
         <Link
           to="/"
           className="text-xl font-bold tracking-tight hover:opacity-90 transition"
         >
           Zomato
         </Link>
+
+        <form
+          onSubmit={handlePincodeSubmit}
+          className="flex items-center gap-0.5  "
+        >
+          <input
+            type="text"
+            placeholder="Pincode"
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value)}
+            className="px-2 py-1 bg-white   rounded text-black text-sm"
+          />
+          <button
+            type="submit"
+            className="bg-white text-black  px-2 py-1 rounded text-sm font-medium hover:bg-gray-100 transition"
+          >
+            Go
+          </button>
+        </form>
 
         <div className="flex items-center gap-6">
           {!user && (

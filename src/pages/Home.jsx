@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import API from "../api/axios";
 import Navbar from "../components/Navbar";
 import RestaurantCard from "../components/RestaurantCard";
@@ -6,35 +7,60 @@ import RestaurantCard from "../components/RestaurantCard";
 function Home() {
   const [restaurants, setRestaurants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [pincode, setPincode] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("pincode") || localStorage.getItem("pincodeFilter") || "";
+  });
+  const location = useLocation();
 
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const response = await API.get("/restaurants");
+        const url = pincode
+          ? `/restaurants?pincode=${encodeURIComponent(pincode)}`
+          : "/restaurants";
+        const response = await API.get(url);
         setRestaurants(response.data);
       } catch (error) {
         console.log(error);
       }
     };
     fetchRestaurants();
-  }, []);
+  }, [pincode]);
 
-  // Filter restaurants based on search query
-  const filteredRestaurants = restaurants.filter((restaurant) => {
-    const query = searchQuery.toLowerCase();
-    return (
-      restaurant.restaurant_name?.toLowerCase().includes(query) ||
-      restaurant.cuisine?.toLowerCase().includes(query) ||
-      restaurant.description?.toLowerCase().includes(query) ||
-      restaurant.restaurant_address?.toLowerCase().includes(query)
-    );
-  });
+  // read pincode from query string whenever location changes, fallback to stored value
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const pin = params.get("pincode");
+    if (pin != null) {
+      setPincode(pin);
+    } else {
+      setPincode(localStorage.getItem("pincodeFilter") || "");
+    }
+  }, [location.search]);
+
+  // Filter restaurants based on search query and pincode
+  const filteredRestaurants = restaurants
+    .filter((restaurant) => {
+      const query = searchQuery.toLowerCase();
+      return (
+        restaurant.restaurant_name?.toLowerCase().includes(query) ||
+        restaurant.cuisine?.toLowerCase().includes(query) ||
+        restaurant.description?.toLowerCase().includes(query) ||
+        restaurant.restaurant_address?.toLowerCase().includes(query)
+      );
+    })
+    .filter((restaurant) => {
+      if (!pincode) return true;
+      const pins = restaurant.restaurant_deliveryPincodes || [];
+      return pins.includes(pincode);
+    });
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <header className="bg-gradient-to-r from-red-600 to-red-700 text-white py-16 px-4">
+      <header className="bg-linear-to-r from-red-600 to-red-700 text-white py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold tracking-tight">
@@ -46,15 +72,15 @@ function Home() {
           </div>
 
           {/* Search Bar */}
-          <div className="flex justify-center">
+          <div className="flex justify-center ">
             <div className="w-full max-w-2xl">
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search restaurants, cuisines..."
+                  placeholder="Search restaurants....."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-6 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 shadow-lg"
+                  className="bg-white w-full px-6 py-3 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-white shadow-lg"
                 />
                 <svg
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"
@@ -79,7 +105,9 @@ function Home() {
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
           {searchQuery
             ? `Search results for "${searchQuery}"`
-            : "Restaurants near you"}
+            : pincode
+              ? `Restaurants delivering to ${pincode}`
+              : "Restaurants near you"}
         </h2>
 
         {filteredRestaurants.length === 0 ? (
@@ -87,7 +115,9 @@ function Home() {
             <p className="text-lg">
               {searchQuery
                 ? "No restaurants found matching your search."
-                : "No restaurants to show yet."}
+                : pincode
+                  ? `No restaurants deliver to ${pincode}.`
+                  : "No restaurants to show yet."}
             </p>
           </div>
         ) : (

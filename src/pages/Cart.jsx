@@ -3,7 +3,6 @@ import API from "../api/axios";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import { loadRazorpay } from "../utils/loadRazorpay";
-import Login from "./Login";
 
 function Cart() {
   const [cart, setCart] = useState(null);
@@ -142,45 +141,6 @@ function Cart() {
       return;
     }
     updateQuantity(menuItemId, -1);
-  };
-
-  const handleCheckout = async () => {
-    if (!pincode) {
-      window.dispatchEvent(
-        new CustomEvent("appToast", {
-          detail: { message: "Please enter a pincode", type: "error" },
-        }),
-      );
-      return;
-    }
-
-    setCheckingOut(true);
-    try {
-      await API.post("/cart/checkout", {
-        pincode,
-        couponCode: appliedCoupon || "",
-      });
-      window.dispatchEvent(
-        new CustomEvent("appToast", {
-          detail: { message: "Order placed successfully!", type: "success" },
-        }),
-      );
-      navigate("/");
-    } catch (error) {
-      window.dispatchEvent(
-        new CustomEvent("appToast", {
-          detail: {
-            message:
-              error.response?.data?.message ||
-              error.message ||
-              "Checkout failed",
-            type: "error",
-          },
-        }),
-      );
-    } finally {
-      setCheckingOut(false);
-    }
   };
 
   const handlePayment = async () => {
