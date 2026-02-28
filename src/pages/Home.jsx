@@ -11,10 +11,12 @@ function Home() {
     const params = new URLSearchParams(window.location.search);
     return params.get("pincode") || localStorage.getItem("pincodeFilter") || "";
   });
+  const [loading, setLoading] = useState(true);
   const location = useLocation();
 
   useEffect(() => {
     const fetchRestaurants = async () => {
+      setLoading(true);
       try {
         const url = pincode
           ? `/restaurants?pincode=${encodeURIComponent(pincode)}`
@@ -23,6 +25,8 @@ function Home() {
         setRestaurants(response.data);
       } catch (error) {
         console.log(error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchRestaurants();
@@ -110,7 +114,11 @@ function Home() {
               : "Restaurants near you"}
         </h2>
 
-        {filteredRestaurants.length === 0 ? (
+        {loading ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-500">
+            <p className="text-lg">Loading restaurants...</p>
+          </div>
+        ) : filteredRestaurants.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-500">
             <p className="text-lg">
               {searchQuery
