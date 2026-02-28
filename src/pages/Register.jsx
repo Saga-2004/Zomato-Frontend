@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import Button from "../components/Button";
 
 function Register() {
   const navigate = useNavigate();
@@ -137,39 +138,13 @@ function Register() {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition"
             />
           </div>
-          <button
+          <Button
             type="submit"
-            disabled={submitting}
-            className={`w-full text-white font-semibold py-3 rounded-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ${submitting ? "bg-red-400 cursor-wait" : "bg-red-600 hover:bg-red-700"}`}
+            loading={submitting}
+            className="w-full text-white py-3 bg-red-600 hover:bg-red-700 focus:ring-red-500"
           >
-            {submitting ? (
-              <span className="inline-flex items-center gap-2 justify-center">
-                <svg
-                  className="animate-spin h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  ></path>
-                </svg>
-                Signing up...
-              </span>
-            ) : (
-              "Sign up"
-            )}
-          </button>
+            {submitting ? "Signing up..." : "Sign up"}
+          </Button>
         </form>
 
         <p className="mt-6 text-center text-gray-600 text-sm">

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import Button from "../components/Button";
 
 function Login() {
   const navigate = useNavigate();
@@ -82,17 +83,13 @@ function Login() {
             required
           />
 
-          <button
+          <Button
             type="submit"
-            disabled={submitting}
-            className={`w-full text-white font-semibold py-3 rounded-lg ${
-              submitting
-                ? "bg-red-400 cursor-wait"
-                : "bg-red-600 hover:bg-red-700"
-            }`}
+            loading={submitting}
+            className="w-full text-white py-3 bg-red-600 hover:bg-red-700 focus:ring-red-500"
           >
             {submitting ? "Logging in..." : "Log in"}
-          </button>
+          </Button>
         </form>
 
         <p className="mt-6 text-center text-gray-600 text-sm">

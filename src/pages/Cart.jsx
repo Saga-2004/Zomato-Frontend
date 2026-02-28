@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import API from "../api/axios";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import Button from "../components/Button";
 import { loadRazorpay } from "../utils/loadRazorpay";
 
 function Cart() {
@@ -288,7 +289,7 @@ function Cart() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main className="max-w-2xl mx-auto px-4 py-8 pb-16">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Cart</h1>
 
         <ul className="space-y-3 mb-8">
@@ -300,7 +301,7 @@ function Cart() {
               <div className="flex items-center gap-4">
                 <div>
                   <img
-                    className="h-20 w-20 rounded-xl object-cover"
+                    className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover"
                     src={item.menuItem.image}
                     alt="Image"
                   />
@@ -372,14 +373,14 @@ function Cart() {
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
                 />
-                <button
+                <Button
                   type="button"
                   onClick={handleApplyCoupon}
-                  // disabled={applying || !couponCode}
-                  className="px-4 py-2 rounded-lg border border-red-500 text-red-600 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+                  loading={applying}
+                  className="px-4 py-2 bg-red-600 text-white text-sm hover:bg-red-700"
                 >
                   {applying ? "Applying…" : "Apply"}
-                </button>
+                </Button>
               </div>
               {appliedCoupon && !summaryError && (
                 <p className="text-xs text-emerald-700 mt-1">
@@ -430,40 +431,14 @@ function Cart() {
             )}
           </div>
 
-          <button
+          <Button
             type="button"
             onClick={handlePayment}
-            disabled={checkingOut}
-            className={`w-full text-white font-semibold py-3 rounded-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ${checkingOut ? "bg-red-400 cursor-wait" : "bg-red-600 hover:bg-red-700"}`}
+            loading={checkingOut}
+            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white focus:ring-red-500"
           >
-            {checkingOut ? (
-              <span className="inline-flex items-center gap-2 justify-center">
-                <svg
-                  className="animate-spin h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                  ></path>
-                </svg>
-                Placing order...
-              </span>
-            ) : (
-              "Pay & Place Order"
-            )}
-          </button>
+            {checkingOut ? "Placing order..." : "Pay & Place Order"}
+          </Button>
         </div>
       </main>
     </div>

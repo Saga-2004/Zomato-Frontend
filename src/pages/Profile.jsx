@@ -7,6 +7,15 @@ function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updatingAvailability, setUpdatingAvailability] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    homeAddress: "",
+    workAddress: "",
+  });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -21,6 +30,17 @@ function Profile() {
     };
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (!profile) return;
+    setForm({
+      name: profile.name || "",
+      phone: profile.phone || "",
+      address: profile.address || "",
+      homeAddress: profile.savedAddresses?.home || "",
+      workAddress: profile.savedAddresses?.work || "",
+    });
+  }, [profile]);
 
   const handleAvailabilityChange = async (nextStatus) => {
     if (!profile) return;
@@ -52,6 +72,52 @@ function Profile() {
     }
   };
 
+  const handleFieldChange = (field) => (e) => {
+    const value = e.target.value;
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    if (!profile) return;
+    setSavingProfile(true);
+    try {
+      const payload = {
+        name: form.name,
+        phone: form.phone,
+        address: form.address,
+        savedAddresses: {
+          home: form.homeAddress,
+          work: form.workAddress,
+        },
+      };
+      const res = await API.put("/users/profile", payload);
+      setProfile(res.data);
+      window.dispatchEvent(
+        new CustomEvent("appToast", {
+          detail: {
+            message: "Profile updated successfully.",
+            type: "success",
+          },
+        }),
+      );
+    } catch (err) {
+      window.dispatchEvent(
+        new CustomEvent("appToast", {
+          detail: {
+            message:
+              err.response?.data?.message ||
+              err.message ||
+              "Failed to update profile.",
+            type: "error",
+          },
+        }),
+      );
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
   const roleLabel = (role) => {
     const labels = {
       admin: "Admin",
@@ -66,7 +132,7 @@ function Profile() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <main className="max-w-xl mx-auto px-4 py-8">
+      <main className="max-w-xl mx-auto px-4 py-8 pb-16">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">My Profile</h1>
 
         {loading ? (
@@ -98,24 +164,80 @@ function Profile() {
                   )}
                 </div>
               </div>
-              <dl className="space-y-3">
+              <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="text-gray-900 mt-0.5">
-                    {profile.email || "—"}
-                  </dd>
+                  <label className="text-sm font-medium text-gray-500 block mb-1">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={handleFieldChange("name")}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm"
+                  />
                 </div>
-                {profile.phone != null && profile.phone !== "" && (
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500">Phone</dt>
-                    <dd className="text-gray-900 mt-0.5">{profile.phone}</dd>
-                  </div>
-                )}
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Role</dt>
-                  <dd className="text-gray-900 mt-0.5">
+                  <label className="text-sm font-medium text-gray-500 block mb-1">
+                    Email
+                  </label>
+                  <div className="text-gray-900 text-sm py-2">
+                    {profile.email || "—"}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500 block mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="text"
+                    value={form.phone}
+                    onChange={handleFieldChange("phone")}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500 block mb-1">
+                    Address
+                  </label>
+                  <textarea
+                    value={form.address}
+                    onChange={handleFieldChange("address")}
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm resize-none"
+                    placeholder="Your primary delivery address"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 block mb-1">
+                      Home address
+                    </label>
+                    <textarea
+                      value={form.homeAddress}
+                      onChange={handleFieldChange("homeAddress")}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm resize-none"
+                      placeholder="Saved 'Home' address"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 block mb-1">
+                      Work address
+                    </label>
+                    <textarea
+                      value={form.workAddress}
+                      onChange={handleFieldChange("workAddress")}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm resize-none"
+                      placeholder="Saved 'Work' address"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-1">Role</p>
+                  <p className="text-gray-900 text-sm">
                     {roleLabel(profile.role)}
-                  </dd>
+                  </p>
                 </div>
                 {profile.role === "delivery_partner" && (
                   <div>
@@ -162,15 +284,24 @@ function Profile() {
                 )}
                 {profile.createdAt && (
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">
+                    <p className="text-sm font-medium text-gray-500">
                       Member since
-                    </dt>
-                    <dd className="text-gray-900 mt-0.5">
+                    </p>
+                    <p className="text-gray-900 text-sm">
                       {new Date(profile.createdAt).toLocaleDateString()}
-                    </dd>
+                    </p>
                   </div>
                 )}
-              </dl>
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingProfile}
+                    className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed transition"
+                  >
+                    {savingProfile ? "Saving..." : "Save Profile"}
+                  </button>
+                </div>
+              </form>
             </div>
           </>
         ) : null}

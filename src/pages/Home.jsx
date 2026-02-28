@@ -64,13 +64,13 @@ function Home() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <header className="bg-linear-to-r from-red-600 to-red-700 text-white py-16 px-4">
+      <header className="bg-linear-to-r from-red-600 to-red-700 text-white py-12 sm:py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
               Order food you love
             </h1>
-            <p className="mt-2 text-red-100 text-lg">
+            <p className="mt-2 text-red-100 text-base sm:text-lg">
               Discover restaurants and get your favourite food delivered.
             </p>
           </div>
@@ -105,7 +105,7 @@ function Home() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-10">
+      <main className="max-w-6xl mx-auto px-4 py-10 pb-16">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
           {searchQuery
             ? `Search results for "${searchQuery}"`

@@ -6,6 +6,9 @@ const API = axios.create({
 
 // INTERCEPTOR
 API.interceptors.request.use((req) => {
+  // dispatch global loader start
+  window.dispatchEvent(new Event("loadingStart"));
+
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
   if (userInfo?.token) {
@@ -14,5 +17,17 @@ API.interceptors.request.use((req) => {
 
   return req;
 });
+
+// hide loader on response / error
+API.interceptors.response.use(
+  (res) => {
+    window.dispatchEvent(new Event("loadingEnd"));
+    return res;
+  },
+  (err) => {
+    window.dispatchEvent(new Event("loadingEnd"));
+    return Promise.reject(err);
+  },
+);
 
 export default API;

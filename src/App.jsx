@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Toast from "./components/Toast";
+import FullPageLoader from "./components/FullPageLoader";
+import BottomNav from "./components/BottomNav";
 
 // Public Pages
 import Home from "./pages/Home";
@@ -36,7 +38,9 @@ function App() {
   return (
     <>
       <Toast />
+      <FullPageLoader />
       <Routes>
+        {/* bottom nav only relevant for mobile, placed after routes so it sits above page content */}
         {/* ================= PUBLIC ROUTES ================= */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
@@ -225,6 +229,7 @@ function App() {
           }
         />
       </Routes>
+      <BottomNav />
     </>
   );
 }

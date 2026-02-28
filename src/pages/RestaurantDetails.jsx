@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import API from "../api/axios";
 import Navbar from "../components/Navbar";
+import Button from "../components/Button";
 
 function RestaurantDetails() {
   const { id } = useParams();
+  const location = useLocation();
+  const [restaurant, setRestaurant] = useState(
+    location.state?.restaurant || null,
+  );
   const [menuItems, setMenuItems] = useState([]);
   const [addingId, setAddingId] = useState(null);
   const [toast, setToast] = useState({
@@ -13,8 +18,12 @@ function RestaurantDetails() {
     type: "success",
   });
   const [loading, setLoading] = useState(true);
+  const [restaurantLoading, setRestaurantLoading] = useState(!restaurant);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortOrder, setSortOrder] = useState(""); // "asc" or "desc"
+  const [ratingValue, setRatingValue] = useState(0);
+  const [submittingRating, setSubmittingRating] = useState(false);
+
   const userInfo =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("userInfo") || "null")
@@ -34,6 +43,26 @@ function RestaurantDetails() {
     };
     fetchMenu();
   }, [id]);
+
+  useEffect(() => {
+    if (restaurant) {
+      setRestaurantLoading(false);
+      return;
+    }
+
+    const fetchRestaurant = async () => {
+      setRestaurantLoading(true);
+      try {
+        const res = await API.get(`/restaurants/${id}`);
+        setRestaurant(res.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setRestaurantLoading(false);
+      }
+    };
+    fetchRestaurant();
+  }, [id, restaurant]);
 
   // whenever menu items update, clear filter back to all and reset sort
   useEffect(() => {
@@ -93,11 +122,71 @@ function RestaurantDetails() {
     }
   };
 
+  const handleSubmitRating = async () => {
+    if (!userInfo) {
+      setToast({
+        visible: true,
+        message: "Please login as a customer to rate this restaurant.",
+        type: "error",
+      });
+      return;
+    }
+    if (userInfo.role !== "customer") {
+      setToast({
+        visible: true,
+        message: "Only customers can submit ratings.",
+        type: "error",
+      });
+      return;
+    }
+    if (!ratingValue || ratingValue < 1 || ratingValue > 5) {
+      setToast({
+        visible: true,
+        message: "Please select a rating between 1 and 5 stars.",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      setSubmittingRating(true);
+      await API.post("/ratings", {
+        restaurantId: id,
+        rating: ratingValue,
+      });
+      setToast({
+        visible: true,
+        message: "Thanks for your rating!",
+        type: "success",
+      });
+      // refresh restaurant to update average rating
+      const res = await API.get(`/restaurants/${id}`);
+      setRestaurant(res.data);
+    } catch (err) {
+      setToast({
+        visible: true,
+        message:
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to submit rating.",
+        type: "error",
+      });
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  const averageRating =
+    restaurant && typeof restaurant.averageRating === "number"
+      ? restaurant.averageRating.toFixed(1)
+      : "—";
+  const prepMinutes = restaurant?.preparationTime || 30;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-4 py-8 pb-16">
         <div className="flex items-center gap-4 mb-6">
           <Link
             to="/"
@@ -115,7 +204,70 @@ function RestaurantDetails() {
           )}
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Menu</h1>
+        <section className="mb-6">
+          {restaurantLoading && !restaurant ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 text-gray-500 text-sm">
+              Loading restaurant details…
+            </div>
+          ) : restaurant ? (
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                    {restaurant.restaurant_name}
+                  </h1>
+                  <p className="text-gray-600 text-sm mt-1">
+                    {restaurant.restaurant_address}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 text-sm font-medium px-3 py-1 rounded-full">
+                    ★ {averageRating}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-xs text-gray-600">
+                    <span className="text-red-500">⏱</span>
+                    <span>Est. {prepMinutes} min</span>
+                  </span>
+                </div>
+              </div>
+              <div className="border-t border-gray-100 pt-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="text-sm text-gray-700">
+                    <p className="font-medium mb-1">Rate this restaurant</p>
+                    <div className="inline-flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRatingValue(star)}
+                          className={`w-7 h-7 flex items-center justify-center rounded-full border text-sm ${
+                            ratingValue >= star
+                              ? "bg-yellow-400 border-yellow-500 text-white"
+                              : "bg-white border-gray-300 text-gray-600"
+                          }`}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleSubmitRating}
+                    loading={submittingRating}
+                    className="inline-flex items-center justify-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:ring-red-500"
+                  >
+                    {submittingRating ? "Submitting..." : "Submit rating"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </section>
+
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">
+          Menu
+        </h2>
 
         {loading ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-500">
@@ -128,7 +280,7 @@ function RestaurantDetails() {
         ) : (
           <>
             {/* category filter */}
-            <div className="mb-4 flex flex-wrap gap-4 items-center">
+            <div className="mb-4 flex flex-col sm:flex-row flex-wrap gap-4 items-center">
               <div>
                 <label htmlFor="category" className="mr-2 font-medium">
                   Filter:
@@ -175,9 +327,9 @@ function RestaurantDetails() {
               ),
             ).map((cat) => (
               <div key={cat} className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-2">
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">
                   {cat}
-                </h2>
+                </h3>
                 <ul className="space-y-3">
                   {menuItems
                     .filter(
@@ -201,51 +353,25 @@ function RestaurantDetails() {
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="h-20 w-20 rounded-4xl object-cover hover:border hover:border-red-600 hover:shadow-xl transition"
+                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-4xl object-cover hover:border hover:border-red-600 hover:shadow-xl transition"
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-semibold text-gray-900">
+                          <h4 className="font-semibold text-gray-900">
                             {item.name}
-                          </h3>
+                          </h4>
                           <p className="text-red-600 font-medium mt-0.5">
                             ₹{item.price}
                           </p>
                         </div>
-                        <button
+                        <Button
                           type="button"
                           onClick={() => addToCart(item._id)}
-                          disabled={addingId === item._id}
-                          className={`shrink-0 text-white font-medium px-4 py-2 rounded-lg focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ${addingId === item._id ? "bg-red-400 cursor-wait" : "bg-red-600 hover:bg-red-700"}`}
+                          loading={addingId === item._id}
+                          className="shrink-0 text-white px-4 py-2 bg-red-600 hover:bg-red-700 focus:ring-red-500"
                         >
-                          {addingId === item._id ? (
-                            <span className="inline-flex items-center gap-2">
-                              <svg
-                                className="animate-spin h-4 w-4 text-white"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                              >
-                                <circle
-                                  className="opacity-25"
-                                  cx="12"
-                                  cy="12"
-                                  r="10"
-                                  stroke="currentColor"
-                                  strokeWidth="4"
-                                ></circle>
-                                <path
-                                  className="opacity-75"
-                                  fill="currentColor"
-                                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                                ></path>
-                              </svg>
-                              Adding...
-                            </span>
-                          ) : (
-                            "Add to cart"
-                          )}
-                        </button>
+                          {addingId === item._id ? "Adding..." : "Add to cart"}
+                        </Button>
                       </li>
                     ))}
                 </ul>
