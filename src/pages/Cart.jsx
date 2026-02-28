@@ -204,9 +204,13 @@ function Cart() {
             try {
               await API.delete(`/orders/${orderId}/cancel-pending`);
             } catch (err) {
-              // ignore not-found errors, log others
-              if (err.response?.status !== 404) {
-                console.log("Failed to delete pending order", err);
+              // silently ignore: 404 (order already deleted), 401 (session expired)
+              // these are non-critical cleanup operations
+              if (
+                err.response?.status &&
+                ![404, 401, 403].includes(err.response.status)
+              ) {
+                console.warn("Failed to delete pending order:", err.message);
               }
             }
 
