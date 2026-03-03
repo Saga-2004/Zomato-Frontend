@@ -6,6 +6,7 @@ import Navbar from "../components/Navbar";
 function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  console.log(orders);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -78,22 +79,91 @@ function MyOrders() {
           {orders.map((order) => (
             <li
               key={order._id}
-              className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition"
+              className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm 
+  hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-gray-900">
-                    {order.restaurant?.name ?? "Restaurant"}
-                  </h3>
-                  <p className="text-gray-500 text-sm mt-0.5">
-                    ₹{order.totalAmount}
+                  <Link
+                    to={`http://localhost:5173/restaurant/${order.restaurant?._id}`}
+                    className="text-lg font-semibold hover:text-gray-800 cursor-pointer text-red-600 transition"
+                  >
+                    {order.restaurant?.restaurant_name ?? "Restaurant"}
+                  </Link>
+
+                  <p className="text-xs text-gray-400">
+                    Order #{order._id.slice(-6).toUpperCase()}
                   </p>
                 </div>
+
+                {/* Status */}
                 <span
-                  className={`shrink-0 text-sm font-medium px-3 py-1 rounded-full ${statusColor(order.status)}`}
+                  className={`text-xs font-semibold px-3 py-1 rounded-full 
+      ${statusColor(order.status)}`}
                 >
                   {order.status}
                 </span>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-100 my-4"></div>
+
+              {/* Items */}
+              <div className="flex flex-wrap gap-2">
+                {order.items.map((item) => (
+                  <span
+                    key={item._id}
+                    className="bg-orange-100 text-orange-700 text-xs px-3 py-1 rounded-full"
+                  >
+                    {item.name} × {item.quantity}
+                  </span>
+                ))}
+              </div>
+
+              {/* Info Section */}
+              <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
+                <div>
+                  <p className="text-gray-400 text-xs">Total</p>
+                  <p className="font-semibold text-lg text-gray-800">
+                    ₹{order.totalAmount}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-gray-400 text-xs">Payment</p>
+                  <span
+                    className={`font-semibold ${
+                      order.paymentStatus === "Paid"
+                        ? "text-green-600"
+                        : "text-red-500"
+                    }`}
+                  >
+                    {order.paymentStatus}
+                  </span>
+                </div>
+              </div>
+
+              {/* Customer */}
+              <div className="mt-4 bg-gray-50 rounded-lg p-3">
+                <p className="text-sm font-medium text-gray-800">
+                  {order.user?.name}
+                </p>
+
+                <p className="text-xs text-gray-500">{order.user?.phone}</p>
+
+                <p className="text-xs text-gray-400 mt-1">
+                  {order.user?.address}
+                </p>
+              </div>
+
+              {/* Footer */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 gap-2">
+                <p className="text-xs text-gray-400">
+                  {new Date(order.createdAt).toLocaleString()}
+                </p>
+
+                {/* Action Buttons */}
               </div>
             </li>
           ))}
