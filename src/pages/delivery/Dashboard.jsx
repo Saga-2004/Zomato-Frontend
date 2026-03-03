@@ -13,6 +13,8 @@ function DeliveryDashboard() {
     try {
       const res = await API.get("/orders/delivery");
       setOrders(res.data || []);
+
+      // console.log(orders);
     } catch (err) {
       console.error(err);
       setError(
@@ -44,9 +46,10 @@ function DeliveryDashboard() {
       const res = await API.put(`/orders/${orderId}/delivery-status`, {
         status,
       });
-      const updated = res.data;
       setOrders((prev) =>
-        prev.map((o) => (o._id === orderId ? { ...o, ...updated } : o)),
+        prev.map((o) =>
+          o._id === orderId ? { ...o, status: res.data.status } : o,
+        ),
       );
     } catch (err) {
       window.dispatchEvent(
@@ -178,32 +181,93 @@ function DeliveryDashboard() {
               key={order._id}
               className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-2 shadow-sm"
             >
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-gray-900">
-                    {order.restaurant?.name ?? "Restaurant"}
-                  </p>
-                  <p className="text-gray-500 text-sm mt-0.5">
-                    ₹{order.totalAmount}
-                    {order.restaurant?.address &&
-                      ` · ${order.restaurant.address}`}
-                  </p>
-                  {order.createdAt && (
-                    <p className="text-gray-400 text-xs mt-0.5">
-                      {new Date(order.createdAt).toLocaleString()}
+              <li
+                key={order._id}
+                className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition"
+              >
+                {/* Header */}
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="font-semibold text-gray-900 text-lg">
+                      {order.restaurant?.restaurant_name ?? "Restaurant"}
+                    </h2>
+
+                    <p className="text-xs text-gray-500">
+                      {order.restaurant?.restaurant_address}
                     </p>
-                  )}
-                  <p className="text-gray-400 text-xs mt-0.5">
-                    Deliver to pincode: {order.pincode}
-                  </p>
+                    {order.createdAt && (
+                      <p className="text-xs text-gray-400">
+                        {new Date(order.createdAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className={`text-xs font-semibold px-3 py-1 rounded-full ${statusColor(
+                      order.status,
+                    )}`}
+                  >
+                    {order.status}
+                  </span>
                 </div>
-                <span
-                  className={`shrink-0 text-sm font-medium px-3 py-1 rounded-full ${statusColor(order.status)}`}
-                >
-                  {order.status}
-                </span>
-              </div>
-              {renderActions(order)}
+
+                {/* Items */}
+
+                <div className="mt-3 text-sm text-gray-600">
+                  <p className="font-medium text-gray-700 mb-1">Items</p>
+
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                    {order.items?.map((item) => (
+                      <span key={item._id} className="text-gray-600">
+                        {item.name} ×{item.quantity}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Order Info */}
+
+                <div className="mt-3 flex justify-between text-sm">
+                  <div>
+                    <p className="text-gray-600">
+                      Customer:{" "}
+                      <span className="font-medium text-gray-800">
+                        {order.user?.name ?? "Customer"}
+                      </span>
+                    </p>
+
+                    {order.user?.phone && (
+                      <p className="text-xs text-gray-500">
+                        {order.user.phone}
+                      </p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold text-gray-900">
+                      ₹{order.totalAmount}
+                    </p>
+                    <p
+                      className={`text-xs ${
+                        order.paymentStatus === "Paid"
+                          ? "text-green-600"
+                          : "text-red-500"
+                      }`}
+                    >
+                      {order.paymentStatus}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Address */}
+                {order.user?.address && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    📍 {order.user.address}{" "}
+                  </p>
+                )}
+
+                {/* Actions */}
+
+                <div className="mt-3">{renderActions(order)}</div>
+              </li>
             </li>
           ))}
         </ul>

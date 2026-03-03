@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import API from "../../api/axios";
 
 function UserDetail() {
@@ -48,16 +48,15 @@ function UserDetail() {
   const handleBlock = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to block this user? They will not be able to login again.",
+        `Are you sure you want to ${user.isBlocked ? "unblock" : "block"} this user?`,
       )
     )
       return;
     setBlocking(true);
     try {
       const res = await API.patch(`/admin/users/${userId}/block`);
-      setUser((prev) =>
-        prev ? { ...prev, isBlocked: res.data?.user?.isBlocked ?? true } : null,
-      );
+      // console.log(res);
+
       window.dispatchEvent(
         new CustomEvent("appToast", {
           detail: {
@@ -68,6 +67,7 @@ function UserDetail() {
           },
         }),
       );
+      await fetchUser();
     } catch (err) {
       window.dispatchEvent(
         new CustomEvent("appToast", {
@@ -133,9 +133,19 @@ function UserDetail() {
               <span className="font-medium text-gray-700">{user.role}</span>
             </p>
             {user.isBlocked && (
-              <span className="inline-block mt-2 text-sm font-medium px-3 py-1 rounded-full bg-red-100 text-red-800">
-                Blocked
-              </span>
+              <>
+                <span className="inline-block mt-2 text-sm font-medium px-3 py-1 rounded-full bg-red-100 text-red-800">
+                  Blocked
+                </span>
+                <button
+                  type="button"
+                  onClick={handleBlock}
+                  disabled={blocking}
+                  className="shrink-0 px-3 py-1 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 m-5 disabled:opacity-50 transition"
+                >
+                  {blocking ? "Un Blocking…" : "UnBlock user"}
+                </button>
+              </>
             )}
           </div>
           {!user.isBlocked && (

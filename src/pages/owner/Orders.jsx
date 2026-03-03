@@ -49,7 +49,7 @@ function OwnerOrders() {
       const res = await API.put(`/orders/${orderId}/status`, { status });
       const updated = res.data;
       setOrders((prev) =>
-        prev.map((o) => (o._id === orderId ? { ...o, ...updated } : o)),
+        prev.map((o) => (o._id === orderId ? { ...o, status: status } : o)),
       );
     } catch (err) {
       window.dispatchEvent(

@@ -22,9 +22,21 @@ function Login() {
 
       const user = response.data;
       localStorage.setItem("userInfo", JSON.stringify(user));
+      // console.log(user);
 
       if (user.role === "admin") navigate("/admin/dashboard");
-      else if (user.role === "restaurant_owner") navigate("/owner/dashboard");
+      else if (user.isBlocked == true) {
+        localStorage.removeItem("userInfo");
+        window.dispatchEvent(
+          new CustomEvent("appToast", {
+            detail: {
+              message: "Your account is blocked.",
+              type: "error",
+            },
+          }),
+        );
+        navigate("/login");
+      } else if (user.role === "restaurant_owner") navigate("/owner/dashboard");
       else if (user.role === "delivery_partner")
         navigate("/delivery/dashboard");
       else navigate("/");

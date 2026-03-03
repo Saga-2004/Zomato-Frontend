@@ -16,12 +16,12 @@ function DeliveryLayout({ children }) {
           <h3 className="font-bold text-gray-900">Delivery Partner</h3>
         </div>
         <nav className="p-3 flex flex-col gap-1 flex-1">
-          <Link
+          {/* <Link
             to="/delivery/dashboard"
             className="px-3 py-2 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium transition"
           >
             Dashboard
-          </Link>
+          </Link> */}
           <Link
             to="/delivery/orders"
             className="px-3 py-2 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 font-medium transition"
