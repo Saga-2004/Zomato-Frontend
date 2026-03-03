@@ -1,8 +1,6 @@
 import { Link } from "react-router-dom";
 
 function RestaurantCard({ restaurant }) {
-  // console.log(restaurant);
-
   const rating = restaurant.averageRating ?? "—";
   const prepMinutes = restaurant.preparationTime || 30;
 
@@ -38,6 +36,12 @@ function RestaurantCard({ restaurant }) {
             <span className="text-red-500">⏱</span>
             <span>Est. {prepMinutes} min</span>
           </span>
+        </div>
+        <div>
+          <h1 className="text-xs sm:text-sm text-gray-500 mt-2">
+            Available Pincode: {restaurant.restaurant_deliveryPincodes[0]},{" "}
+            {restaurant.restaurant_deliveryPincodes[1]}
+          </h1>
         </div>
         <span className="inline-block mt-3 text-red-600 font-medium text-sm group-hover:underline">
           View menu →
