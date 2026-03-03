@@ -86,7 +86,7 @@ function MyOrders() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <Link
-                    to={`http://localhost:5173/restaurant/${order.restaurant?._id}`}
+                    to={`/restaurant/${order.restaurant?._id}`}
                     className="text-lg font-semibold hover:text-gray-800 cursor-pointer text-red-600 transition"
                   >
                     {order.restaurant?.restaurant_name ?? "Restaurant"}
