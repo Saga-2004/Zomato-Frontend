@@ -219,6 +219,11 @@ function RestaurantDetails() {
                   <p className="text-gray-600 text-sm mt-1">
                     {restaurant.restaurant_address}
                   </p>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Available Pincodes:{" "}
+                    {restaurant.restaurant_deliveryPincodes[0]},{" "}
+                    {restaurant.restaurant_deliveryPincodes[1]}
+                  </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 text-sm font-medium px-3 py-1 rounded-full">

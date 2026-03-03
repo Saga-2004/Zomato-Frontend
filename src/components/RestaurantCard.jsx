@@ -39,7 +39,7 @@ function RestaurantCard({ restaurant }) {
         </div>
         <div>
           <h1 className="text-xs sm:text-sm text-gray-500 mt-2">
-            Available Pincode: {restaurant.restaurant_deliveryPincodes[0]},{" "}
+            Available Pincodes: {restaurant.restaurant_deliveryPincodes[0]},{" "}
             {restaurant.restaurant_deliveryPincodes[1]}
           </h1>
         </div>

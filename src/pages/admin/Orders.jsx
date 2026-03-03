@@ -7,12 +7,16 @@ function Orders() {
   const [error, setError] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
 
+  // console.log(orders);
+
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await API.get("/admin/orders");
       const data = response.data;
+      // console.log(data);
+
       setOrders(
         Array.isArray(data)
           ? data
@@ -126,12 +130,16 @@ function Orders() {
             >
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-gray-900">
-                  {order.restaurant?.name ?? "Restaurant"}
+                  {" "}
+                  {order.restaurant?.restaurant_name ?? "Restaurant"}
                 </p>
                 <p className="text-gray-500 text-sm mt-0.5">
                   ₹{order.totalAmount}
                   {order.user?.name && ` · ${order.user.name}`}
                   {order.user?.email && ` (${order.user.email})`}
+                </p>
+                <p className="text-gray-500 text-sm">
+                  Phone no. {order.user?.phone}
                 </p>
                 {order.createdAt && (
                   <p className="text-gray-400 text-xs mt-0.5">

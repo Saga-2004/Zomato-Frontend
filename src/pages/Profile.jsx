@@ -13,8 +13,6 @@ function Profile() {
     name: "",
     phone: "",
     address: "",
-    homeAddress: "",
-    workAddress: "",
   });
 
   useEffect(() => {
@@ -37,8 +35,6 @@ function Profile() {
       name: profile.name || "",
       phone: profile.phone || "",
       address: profile.address || "",
-      homeAddress: profile.savedAddresses?.home || "",
-      workAddress: profile.savedAddresses?.work || "",
     });
   }, [profile]);
 
@@ -86,10 +82,6 @@ function Profile() {
         name: form.name,
         phone: form.phone,
         address: form.address,
-        savedAddresses: {
-          home: form.homeAddress,
-          work: form.workAddress,
-        },
       };
       const res = await API.put("/users/profile", payload);
       setProfile(res.data);
@@ -207,32 +199,7 @@ function Profile() {
                     placeholder="Your primary delivery address"
                   />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">
-                      Home address
-                    </label>
-                    <textarea
-                      value={form.homeAddress}
-                      onChange={handleFieldChange("homeAddress")}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm resize-none"
-                      placeholder="Saved 'Home' address"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-gray-500 block mb-1">
-                      Work address
-                    </label>
-                    <textarea
-                      value={form.workAddress}
-                      onChange={handleFieldChange("workAddress")}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-sm resize-none"
-                      placeholder="Saved 'Work' address"
-                    />
-                  </div>
-                </div>
+                {/* Removed Home and Work address fields, only Address remains */}
                 <div>
                   <p className="text-sm font-medium text-gray-500 mb-1">Role</p>
                   <p className="text-gray-900 text-sm">

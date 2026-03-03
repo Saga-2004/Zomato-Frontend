@@ -5,6 +5,8 @@ import Navbar from "../components/Navbar";
 import Button from "../components/Button";
 import { loadRazorpay } from "../utils/loadRazorpay";
 
+// Fetch user profile for address
+
 function Cart() {
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,7 +18,20 @@ function Cart() {
   const [appliedCoupon, setAppliedCoupon] = useState("");
   const [applying, setApplying] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [userAddress, setUserAddress] = useState("");
   const navigate = useNavigate();
+  // Fetch user address on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await API.get("/users/profile");
+        setUserAddress(response.data?.address || "");
+      } catch (err) {
+        setUserAddress("");
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const mergeCartItems = (rawCart) => {
     if (!rawCart || !Array.isArray(rawCart.items)) return rawCart;
@@ -107,7 +122,7 @@ function Cart() {
         setSummaryError(null);
       } else {
         // invalid / expired coupon
-        setAppliedCoupon("");
+        setAppliedCoupon("INVALID");
       }
     } finally {
       setApplying(false);
@@ -176,6 +191,7 @@ function Cart() {
 
       // 2️⃣ Create Razorpay order
       const rzpOrder = await API.post("/payment/create-order", {
+        couponCode: appliedCoupon || "",
         amount: totalAmount,
       });
 
@@ -223,7 +239,11 @@ function Cart() {
       const paymentObject = new window.Razorpay(options);
       paymentObject.open();
     } catch (error) {
-      console.log(error);
+      console.log({
+        err: error,
+        message: error.message,
+        response: error.response,
+      });
       alert(error.response?.data?.message || "Payment failed");
       setCheckingOut(false);
     }
@@ -351,6 +371,16 @@ function Cart() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Checkout</h3>
 
           <div className="space-y-4 mb-6">
+            {userAddress && (
+              <div className="mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Address
+                </label>
+                <div className="bg-gray-100 rounded-lg px-4 py-2 text-gray-900 text-sm">
+                  {userAddress}
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Pincode
@@ -370,7 +400,14 @@ function Cart() {
                 <input
                   placeholder="Coupon code (optional)"
                   value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  onChange={(e) => {
+                    const val = e.target.value.toUpperCase();
+                    setCouponCode(val);
+                    if (val === "") {
+                      setAppliedCoupon("");
+                      setSummaryError(null);
+                    }
+                  }}
                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
                 />
                 <Button
@@ -382,11 +419,17 @@ function Cart() {
                   {applying ? "Applying…" : "Apply"}
                 </Button>
               </div>
-              {appliedCoupon && !summaryError && (
-                <p className="text-xs text-emerald-700 mt-1">
-                  Coupon <span className="font-semibold">{appliedCoupon}</span>{" "}
-                  applied.
-                </p>
+              {appliedCoupon === "INVALID" ? (
+                <p className="text-xs text-red-600 mt-1">Coupon Invalid</p>
+              ) : (
+                appliedCoupon &&
+                !summaryError && (
+                  <p className="text-xs text-emerald-700 mt-1">
+                    Coupon{" "}
+                    <span className="font-semibold">{appliedCoupon}</span>{" "}
+                    applied.
+                  </p>
+                )
               )}
             </div>
           </div>
