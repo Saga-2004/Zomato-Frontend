@@ -3,174 +3,240 @@ import { Link } from "react-router-dom";
 import API from "../api/axios";
 import Navbar from "../components/Navbar";
 
-function MyOrders() {
+function statusStyle(status) {
+  const s = (status || "").toLowerCase();
+  if (s === "delivered")
+    return "bg-green-50 text-green-600 border border-green-200";
+  if (s === "cancelled") return "bg-red-50 text-red-500 border border-red-200";
+  if (s === "pending" || s === "placed")
+    return "bg-amber-50 text-amber-600 border border-amber-200";
+  return "bg-[#F4EFE6] text-[#9C9088] border border-[#EDE8DF]";
+}
+
+function statusDotStyle(status) {
+  const s = (status || "").toLowerCase();
+  if (s === "delivered") return "bg-green-500";
+  if (s === "cancelled") return "bg-red-500";
+  if (s === "pending" || s === "placed") return "bg-amber-400 animate-pulse";
+  return "bg-[#9C9088]";
+}
+
+function OrderSkeleton() {
+  return Array.from({ length: 3 }).map((_, i) => (
+    <div
+      key={i}
+      className="bg-white border border-[#EDE8DF] rounded-2xl p-5 mb-3.5 animate-pulse"
+    >
+      <div className="flex justify-between mb-4">
+        <div className="space-y-2">
+          <div className="h-4 bg-[#F4EFE6] rounded-full w-48" />
+          <div className="h-2.5 bg-[#F4EFE6] rounded-full w-24" />
+        </div>
+        <div className="h-6 bg-[#F4EFE6] rounded-full w-20" />
+      </div>
+      <div className="h-px bg-[#EDE8DF] mb-3.5" />
+      <div className="flex gap-2 flex-wrap">
+        {[80, 110, 70].map((w) => (
+          <div
+            key={w}
+            className="h-7 bg-[#F4EFE6] rounded-full"
+            style={{ width: w }}
+          />
+        ))}
+      </div>
+    </div>
+  ));
+}
+
+export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  console.log(orders);
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    try {
-      const response = await API.get("/orders/my-orders");
-      setOrders(response.data);
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchOrders();
+    API.get("/orders/my-orders")
+      .then((r) => setOrders(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  const statusColor = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "delivered") return "bg-green-100 text-green-800";
-    if (s === "cancelled") return "bg-red-100 text-red-800";
-    if (s === "pending" || s === "placed") return "bg-amber-100 text-amber-800";
-    return "bg-gray-100 text-gray-800";
-  };
+  return (
+    <div className="min-h-screen bg-[#FFFDF9]">
+      <Navbar />
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center text-gray-500">
-          Loading orders…
+      <main className="max-w-3xl mx-auto px-4 sm:px-5 py-8 pb-24">
+        {/* Header */}
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-7">
+          <div>
+            <p className="text-xs font-semibold text-red-500 uppercase tracking-widest mb-0.5">
+              History
+            </p>
+            <h1
+              className="text-2xl font-black text-[#1A1208] tracking-tight"
+              style={{ fontFamily: "Georgia, serif" }}
+            >
+              My Orders
+            </h1>
+          </div>
+          {!loading && orders.length > 0 && (
+            <span className="bg-[#F4EFE6] border border-[#EDE8DF] text-[#9C9088] text-xs font-bold px-4 py-1.5 rounded-full">
+              {orders.length} order{orders.length !== 1 ? "s" : ""}
+            </span>
+          )}
         </div>
-      </div>
-    );
-  }
 
-  if (!loading && orders.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 shadow-sm">
-            <p className="text-4xl mb-4">📋</p>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        {/* Loading */}
+        {loading ? (
+          <OrderSkeleton />
+        ) : orders.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center gap-4 bg-white border-2 border-dashed border-[#DDD8CE] rounded-2xl py-20 px-6 text-center">
+            <span className="text-5xl">📋</span>
+            <p
+              className="text-lg font-black text-[#1A1208] tracking-tight"
+              style={{ fontFamily: "Georgia, serif" }}
+            >
               No orders yet
-            </h2>
-            <p className="text-gray-500 mb-6">
-              Your order history will appear here.
+            </p>
+            <p className="text-sm text-[#9C9088] max-w-xs leading-relaxed">
+              Your order history will appear here once you place your first
+              order.
             </p>
             <Link
               to="/"
-              className="inline-block bg-red-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-red-700 transition"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-full shadow-md shadow-red-200 hover:-translate-y-0.5 transition-all duration-150"
             >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+              </svg>
               Order food
             </Link>
           </div>
-        </div>
-      </div>
-    );
-  }
+        ) : (
+          /* Orders list */
+          <ul className="space-y-3.5 p-0 list-none">
+            {orders.map((order, idx) => (
+              <li
+                key={order._id}
+                className="bg-white border border-[#EDE8DF] hover:border-[#DDD8CE] rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-[fadeUp_0.4s_ease_both]"
+                style={{ animationDelay: `${Math.min(idx * 45, 280)}ms` }}
+              >
+                {/* Top row */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <Link
+                      to={`/restaurant/${order.restaurant?._id}`}
+                      className="font-black text-[#1A1208] hover:text-red-500 text-base tracking-tight block mb-1 transition-colors"
+                      style={{ fontFamily: "Georgia, serif" }}
+                    >
+                      {order.restaurant?.restaurant_name ?? "Restaurant"}
+                    </Link>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#9C9088]">
+                      #{order._id.slice(-8).toUpperCase()}
+                    </span>
+                  </div>
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-
-      <main className="max-w-2xl mx-auto px-4 py-8 pb-16">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">My Orders</h1>
-
-        <ul className="space-y-4">
-          {orders.map((order) => (
-            <li
-              key={order._id}
-              className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm 
-  hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-            >
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <Link
-                    to={`/restaurant/${order.restaurant?._id}`}
-                    className="text-lg font-semibold hover:text-gray-800 cursor-pointer text-red-600 transition"
-                  >
-                    {order.restaurant?.restaurant_name ?? "Restaurant"}
-                  </Link>
-
-                  <p className="text-xs text-gray-400">
-                    Order #{order._id.slice(-6).toUpperCase()}
-                  </p>
-                </div>
-
-                {/* Status */}
-                <span
-                  className={`text-xs font-semibold px-3 py-1 rounded-full 
-      ${statusColor(order.status)}`}
-                >
-                  {order.status}
-                </span>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-gray-100 my-4"></div>
-
-              {/* Items */}
-              <div className="flex flex-wrap gap-2">
-                {order.items.map((item) => (
+                  {/* Status badge */}
                   <span
-                    key={item._id}
-                    className="bg-orange-100 text-orange-700 text-xs px-3 py-1 rounded-full"
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 ${statusStyle(order.status)}`}
                   >
-                    {item.name} × {item.quantity}
-                  </span>
-                ))}
-              </div>
-
-              {/* Info Section */}
-              <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-                <div>
-                  <p className="text-gray-400 text-xs">Total</p>
-                  <p className="font-semibold text-lg text-gray-800">
-                    ₹{order.totalAmount}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-gray-400 text-xs">Payment</p>
-                  <span
-                    className={`font-semibold ${
-                      order.paymentStatus === "Paid"
-                        ? "text-green-600"
-                        : "text-red-500"
-                    }`}
-                  >
-                    {order.paymentStatus}
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDotStyle(order.status)}`}
+                    />
+                    {order.status}
                   </span>
                 </div>
-              </div>
 
-              {/* Customer */}
-              <div className="mt-4 bg-gray-50 rounded-lg p-3">
-                <p className="text-sm font-medium text-gray-800">
-                  {order.user?.name}
-                </p>
+                <div className="h-px bg-[#EDE8DF] mb-4" />
 
-                <p className="text-xs text-gray-500">{order.user?.phone}</p>
+                {/* Item chips */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {order.items.map((item) => (
+                    <span
+                      key={item._id}
+                      className="bg-red-50 border border-red-100 text-red-600 text-xs font-semibold px-3 py-1 rounded-full"
+                    >
+                      {item.name} × {item.quantity}
+                    </span>
+                  ))}
+                </div>
 
-                <p className="text-xs text-gray-400 mt-1">
-                  {order.user?.address}
-                </p>
-              </div>
+                {/* Meta grid */}
+                <div className="grid grid-cols-2 gap-2.5 mb-3">
+                  <div className="bg-[#FBF7F0] border border-[#EDE8DF] rounded-xl px-3.5 py-3">
+                    <p className="text-[10.5px] font-bold uppercase tracking-widest text-[#9C9088] mb-1">
+                      Total
+                    </p>
+                    <p
+                      className="text-base font-black text-[#1A1208] tracking-tight"
+                      style={{ fontFamily: "Georgia, serif" }}
+                    >
+                      ₹{order.totalAmount}
+                    </p>
+                  </div>
+                  <div className="bg-[#FBF7F0] border border-[#EDE8DF] rounded-xl px-3.5 py-3">
+                    <p className="text-[10.5px] font-bold uppercase tracking-widest text-[#9C9088] mb-1">
+                      Payment
+                    </p>
+                    <p
+                      className={`text-base font-black tracking-tight ${order.paymentStatus === "Paid" ? "text-green-600" : "text-red-500"}`}
+                      style={{ fontFamily: "Georgia, serif" }}
+                    >
+                      {order.paymentStatus}
+                    </p>
+                  </div>
+                </div>
 
-              {/* Footer */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-4 gap-2">
-                <p className="text-xs text-gray-400">
-                  {new Date(order.createdAt).toLocaleString()}
-                </p>
+                {/* Customer row */}
+                {order.user && (
+                  <div className="bg-[#FBF7F0] border border-[#EDE8DF] rounded-xl px-3.5 py-3 flex items-center gap-3 mb-3">
+                    <div
+                      className="w-8 h-8 rounded-full bg-red-50 border-2 border-red-200 flex items-center justify-center font-black text-sm text-red-500 shrink-0"
+                      style={{ fontFamily: "Georgia, serif" }}
+                    >
+                      {order.user.name?.charAt(0)?.toUpperCase() || "?"}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#1A1208]">
+                        {order.user.name}
+                      </p>
+                      <p className="text-xs text-[#9C9088]">
+                        {order.user.phone}
+                        {order.user.address && ` · ${order.user.address}`}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
-                {/* Action Buttons */}
-              </div>
-            </li>
-          ))}
-        </ul>
+                {/* Timestamp */}
+                <div className="flex items-center justify-end gap-1.5 text-[11.5px] text-[#9C9088] font-medium">
+                  <svg
+                    className="w-3 h-3"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  {new Date(order.createdAt).toLocaleString("en-IN", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </main>
     </div>
   );
 }
-
-export default MyOrders;

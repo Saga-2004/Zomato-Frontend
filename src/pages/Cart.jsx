@@ -2,10 +2,7 @@ import { useEffect, useState } from "react";
 import API from "../api/axios";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import Button from "../components/Button";
 import { loadRazorpay } from "../utils/loadRazorpay";
-
-// Fetch user profile for address
 
 function Cart() {
   const [cart, setCart] = useState(null);
@@ -20,43 +17,38 @@ function Cart() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [userAddress, setUserAddress] = useState("");
   const navigate = useNavigate();
-  // Fetch user address on mount
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await API.get("/users/profile");
-        setUserAddress(response.data?.address || "");
-      } catch (err) {
-        setUserAddress("");
-      }
-    };
-    fetchProfile();
+    API.get("/users/profile")
+      .then((r) => setUserAddress(r.data?.address || ""))
+      .catch(() => {});
   }, []);
 
   const mergeCartItems = (rawCart) => {
     if (!rawCart || !Array.isArray(rawCart.items)) return rawCart;
-
     const map = new Map();
-
     rawCart.items.forEach((item) => {
-      const key = item.menuItem?._id || item.menuItemId || item._id;
-      if (!key) return;
-
+      // Use menuItem._id + variantIdx as key
+      const baseId = item.menuItem?._id || item.menuItemId || item._id;
+      const key =
+        baseId +
+        "_" +
+        (item.variantIdx !== undefined && item.variantIdx !== null
+          ? item.variantIdx
+          : "noVar");
+      if (!baseId) return;
       const existing = map.get(key);
-      if (!existing) {
-        map.set(key, { ...item });
-      } else {
-        map.set(key, {
-          ...existing,
-          quantity: (existing.quantity || 0) + (item.quantity || 0 || 1),
-        });
-      }
+      map.set(
+        key,
+        existing
+          ? {
+              ...existing,
+              quantity: (existing.quantity || 0) + (item.quantity || 1),
+            }
+          : { ...item },
+      );
     });
-
-    return {
-      ...rawCart,
-      items: Array.from(map.values()),
-    };
+    return { ...rawCart, items: Array.from(map.values()) };
   };
 
   const fetchCart = async () => {
@@ -64,12 +56,9 @@ function Cart() {
     setError(null);
     try {
       const response = await API.get("/cart");
-      const merged = mergeCartItems(response.data);
-      setCart(merged);
-      // notify other components (navbar) about the new cart count
+      setCart(mergeCartItems(response.data));
       window.dispatchEvent(new Event("cartUpdated"));
     } catch (err) {
-      console.error(err);
       setError(
         err.response?.data?.message || err.message || "Failed to load cart",
       );
@@ -83,20 +72,17 @@ function Cart() {
     fetchCart();
   }, []);
 
-  const fetchSummary = async (codeForSummary = "") => {
-    if (!cart || !cart.items || cart.items.length === 0) {
+  const fetchSummary = async (code = "") => {
+    if (!cart?.items?.length) {
       setSummary(null);
       return false;
     }
     try {
       setSummaryError(null);
-      const res = await API.post("/cart/summary", {
-        couponCode: codeForSummary,
-      });
+      const res = await API.post("/cart/summary", { couponCode: code });
       setSummary(res.data);
       return true;
     } catch (err) {
-      console.error(err);
       setSummary(null);
       setSummaryError(
         err.response?.data?.message ||
@@ -108,9 +94,7 @@ function Cart() {
   };
 
   useEffect(() => {
-    // initial summary without coupon
     fetchSummary("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart]);
 
   const handleApplyCoupon = async () => {
@@ -120,10 +104,7 @@ function Cart() {
       if (ok) {
         setAppliedCoupon(couponCode);
         setSummaryError(null);
-      } else {
-        // invalid / expired coupon
-        setAppliedCoupon("INVALID");
-      }
+      } else setAppliedCoupon("INVALID");
     } finally {
       setApplying(false);
     }
@@ -133,8 +114,8 @@ function Cart() {
     try {
       await API.delete(`/cart/${itemId}`);
       fetchCart();
-    } catch (error) {
-      console.log(error);
+    } catch (e) {
+      console.log(e);
     }
   };
 
@@ -142,21 +123,9 @@ function Cart() {
     try {
       await API.post("/cart", { menuItemId, quantity: delta });
       fetchCart();
-    } catch (error) {
-      console.log(error);
+    } catch (e) {
+      console.log(e);
     }
-  };
-
-  const incrementItem = (menuItemId) => {
-    updateQuantity(menuItemId, 1);
-  };
-
-  const decrementItem = (menuItemId, currentQty) => {
-    if (currentQty <= 1) {
-      removeItem(menuItemId);
-      return;
-    }
-    updateQuantity(menuItemId, -1);
   };
 
   const handlePayment = async () => {
@@ -168,50 +137,35 @@ function Cart() {
       );
       return;
     }
-
-    // 🔥 LOAD RAZORPAY SDK FIRST
     const sdkLoaded = await loadRazorpay();
-
     if (!sdkLoaded) {
       alert("Razorpay SDK failed to load");
       return;
     }
-
     setCheckingOut(true);
-    console.log(appliedCoupon);
-
     try {
-      // 1️⃣ Create order in DB
       const checkoutRes = await API.post("/cart/checkout", {
         pincode,
         couponCode: appliedCoupon || "",
       });
-
       const { orderId, totalAmount } = checkoutRes.data;
-
-      // 2️⃣ Create Razorpay order
       const rzpOrder = await API.post("/payment/create-order", {
         couponCode: appliedCoupon || "",
         amount: totalAmount,
       });
-
       const { id, amount, currency } = rzpOrder.data;
-
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount,
         currency,
         order_id: id,
         name: "Zomato Clone",
-
         handler: async function (response) {
           const verifyRes = await API.post("/payment/verify-payment", response);
-
           if (verifyRes.data.success) {
             await API.put(`/orders/${orderId}/pay`, {
               paymentId: response.razorpay_payment_id,
             });
-
             alert("Payment Successful 🎉");
             navigate("/my-orders");
           }
@@ -221,56 +175,59 @@ function Cart() {
             try {
               await API.delete(`/orders/${orderId}/cancel-pending`);
             } catch (err) {
-              // silently ignore: 404 (order already deleted), 401 (session expired)
-              // these are non-critical cleanup operations
               if (
                 err.response?.status &&
                 ![404, 401, 403].includes(err.response.status)
-              ) {
+              )
                 console.warn("Failed to delete pending order:", err.message);
-              }
             }
-
             setCheckingOut(false);
           },
         },
       };
-
-      const paymentObject = new window.Razorpay(options);
-      paymentObject.open();
+      new window.Razorpay(options).open();
     } catch (error) {
-      console.log({
-        err: error,
-        message: error.message,
-        response: error.response,
-      });
       alert(error.response?.data?.message || "Payment failed");
       setCheckingOut(false);
     }
   };
 
-  if (loading) {
+  const fallbackTotal =
+    cart?.items?.reduce(
+      (s, i) =>
+        s +
+        (typeof i.price === "number" ? i.price : i.menuItem.price) *
+          (i.quantity || 1),
+      0,
+    ) ?? 0;
+
+  // ── Loading ──
+  if (loading)
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-2xl mx-auto px-4 py-12 text-center text-gray-500">
-          Loading cart…
+        <div className="flex items-center justify-center pt-24 flex-col gap-3">
+          <div className="w-8 h-8 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" />
+          <p className="text-sm text-gray-400 font-medium">Loading cart…</p>
         </div>
       </div>
     );
-  }
 
-  if (error) {
+  // ── Error ──
+  if (error)
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-            <p className="text-red-600 mb-4">{error}</p>
+        <div className="max-w-md mx-auto mt-16 px-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-14 text-center">
+            <div className="text-5xl mb-4">⚠️</div>
+            <p className="font-bold text-gray-900 text-lg mb-1">
+              Something went wrong
+            </p>
+            <p className="text-gray-400 text-sm mb-6">{error}</p>
             <button
-              type="button"
-              onClick={() => fetchCart()}
-              className="bg-red-600 text-white font-medium px-6 py-2 rounded-lg hover:bg-red-700 transition"
+              onClick={fetchCart}
+              className="px-6 py-2.5 bg-red-500 text-white font-semibold text-sm rounded-xl hover:bg-red-600 transition"
             >
               Retry
             </button>
@@ -278,24 +235,24 @@ function Cart() {
         </div>
       </div>
     );
-  }
 
-  if (!cart || !cart.items || cart.items.length === 0) {
+  // ── Empty ──
+  if (!cart?.items?.length)
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 shadow-sm">
-            <p className="text-4xl mb-4">🛒</p>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+        <div className="max-w-md mx-auto mt-16 px-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-14 text-center">
+            <div className="text-5xl mb-4">🛒</div>
+            <p className="font-bold text-gray-900 text-lg mb-1">
               Your cart is empty
-            </h2>
-            <p className="text-gray-500 mb-6">
+            </p>
+            <p className="text-gray-400 text-sm mb-6">
               Add items from a restaurant to get started.
             </p>
             <Link
               to="/"
-              className="inline-block bg-red-600 text-white font-medium px-6 py-3 rounded-lg hover:bg-red-700 transition"
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-red-500 text-white font-semibold text-sm rounded-xl hover:bg-red-600 transition"
             >
               Browse restaurants
             </Link>
@@ -303,101 +260,133 @@ function Cart() {
         </div>
       </div>
     );
-  }
 
+  // ── Cart ──
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
+      <main className="max-w-2xl mx-auto px-4 sm:px-5 py-8 pb-24">
+        <p className="text-xs font-semibold text-red-500 uppercase tracking-widest mb-1">
+          Order
+        </p>
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight mb-6">
+          Your Cart
+        </h1>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 pb-16">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Cart</h1>
+        {/* Cart items */}
+        <div className="space-y-3 mb-6">
+          {cart.items.map((item) => {
+            // Use variant price if present
+            const price = item.price ?? item.menuItem.price;
+            return (
+              <div
+                key={item._id}
+                className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex-wrap sm:flex-nowrap"
+              >
+                {/* Image */}
+                <img
+                  src={item.menuItem.image}
+                  alt={item.menuItem.name}
+                  className="w-16 h-16 rounded-xl object-cover border border-gray-100 shrink-0"
+                />
 
-        <ul className="space-y-3 mb-8">
-          {cart.items.map((item) => (
-            <li
-              key={item._id}
-              className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap items-center justify-between gap-4 shadow-sm"
-            >
-              <div className="flex items-center gap-4">
-                <div>
-                  <img
-                    className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover"
-                    src={item.menuItem.image}
-                    alt="Image"
-                  />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900">
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">
                     {item.menuItem.name}
-                  </h3>
-                  <p className="text-gray-600 text-sm">
-                    ₹{item.menuItem.price} × {item.quantity}
+                    {item.variantName && (
+                      <span className="ml-2 text-xs text-gray-500 font-normal">
+                        [{item.variantName}]
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-sm text-gray-400 mt-0.5">
+                    ₹{price} × {item.quantity} ={" "}
+                    <span className="font-bold text-gray-700">
+                      ₹{price * item.quantity}
+                    </span>
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+
+                {/* Qty controls */}
+                <div className="flex items-center gap-2 shrink-0">
                   <button
-                    type="button"
                     onClick={() =>
-                      decrementItem(item.menuItem._id, item.quantity)
+                      item.quantity <= 1
+                        ? removeItem(item.menuItem._id)
+                        : updateQuantity(item.menuItem._id, -1, item.variantIdx)
                     }
-                    className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100"
+                    className="w-8 h-8 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 text-base font-semibold flex items-center justify-center hover:border-red-300 hover:bg-red-50 hover:text-red-500 transition-all"
                   >
-                    -
+                    −
                   </button>
-                  <span className="min-w-8 text-center text-sm font-medium text-gray-900">
+                  <span className="min-w-[20px] text-center text-sm font-bold text-gray-900">
                     {item.quantity}
                   </span>
                   <button
-                    type="button"
-                    onClick={() => incrementItem(item.menuItem._id)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100"
+                    onClick={() =>
+                      updateQuantity(item.menuItem._id, 1, item.variantIdx)
+                    }
+                    className="w-8 h-8 rounded-lg border border-gray-200 bg-gray-50 text-gray-600 text-base font-semibold flex items-center justify-center hover:border-red-300 hover:bg-red-50 hover:text-red-500 transition-all"
                   >
                     +
                   </button>
                 </div>
+
+                {/* Remove */}
+                <button
+                  onClick={() => removeItem(item.menuItem._id)}
+                  className="text-xs font-semibold text-gray-400 hover:text-red-500 underline underline-offset-2 transition-colors shrink-0"
+                >
+                  Remove
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => removeItem(item.menuItem._id)}
-                className="text-red-600 font-medium text-sm hover:underline"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
+            );
+          })}
+        </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Checkout</h3>
+        {/* Checkout card */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-red-500 to-orange-400" />
+          <div className="p-5 sm:p-6">
+            <h3 className="text-lg font-bold text-gray-900 tracking-tight mb-5">
+              Checkout
+            </h3>
 
-          <div className="space-y-4 mb-6">
+            {/* Delivery address */}
             {userAddress && (
-              <div className="mb-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address
+              <div className="mb-4">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  Delivery address
                 </label>
-                <div className="bg-gray-100 rounded-lg px-4 py-2 text-gray-900 text-sm">
+                <div className="px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-600 font-medium">
                   {userAddress}
                 </div>
               </div>
             )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+
+            {/* Pincode */}
+            <div className="mb-4">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                 Pincode
               </label>
               <input
-                placeholder="Enter pincode"
+                type="text"
+                placeholder="Enter delivery pincode"
                 value={pincode}
                 onChange={(e) => setPincode(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 focus:bg-white transition"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+
+            {/* Coupon */}
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                 Coupon code
               </label>
               <div className="flex gap-2">
                 <input
+                  type="text"
                   placeholder="Coupon code (optional)"
                   value={couponCode}
                   onChange={(e) => {
@@ -408,80 +397,72 @@ function Cart() {
                       setSummaryError(null);
                     }
                   }}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none"
+                  className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-700 placeholder-gray-300 focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 focus:bg-white transition"
                 />
-                <Button
-                  type="button"
+                <button
                   onClick={handleApplyCoupon}
-                  loading={applying}
-                  className="px-4 py-2 bg-red-600 text-white text-sm hover:bg-red-700"
+                  disabled={applying || !couponCode}
+                  className="px-5 py-2.5 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition shrink-0"
                 >
-                  {applying ? "Applying…" : "Apply"}
-                </Button>
+                  {applying ? "…" : "Apply"}
+                </button>
               </div>
               {appliedCoupon === "INVALID" ? (
-                <p className="text-xs text-red-600 mt-1">Coupon Invalid</p>
-              ) : (
-                appliedCoupon &&
-                !summaryError && (
-                  <p className="text-xs text-emerald-700 mt-1">
-                    Coupon{" "}
-                    <span className="font-semibold">{appliedCoupon}</span>{" "}
-                    applied.
-                  </p>
-                )
+                <p className="text-xs font-semibold text-red-500 mt-1.5">
+                  Invalid coupon code
+                </p>
+              ) : appliedCoupon && !summaryError ? (
+                <p className="text-xs font-semibold text-emerald-600 mt-1.5">
+                  ✓ Coupon <strong>{appliedCoupon}</strong> applied!
+                </p>
+              ) : null}
+            </div>
+
+            {/* Summary */}
+            <div className="border-t border-gray-100 pt-4 space-y-2.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400 font-medium">Items total</span>
+                <span className="font-semibold text-gray-700">
+                  ₹{summary?.subtotal ?? fallbackTotal}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400 font-medium">Discount</span>
+                <span className="font-semibold text-emerald-600">
+                  −₹{summary?.discountApplied ?? 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-400 font-medium">
+                  Delivery charges
+                </span>
+                <span className="font-semibold text-emerald-600">Free</span>
+              </div>
+              {summaryError && (
+                <p className="text-xs text-red-500 font-medium">
+                  {summaryError}
+                </p>
               )}
+              <div className="flex items-baseline justify-between border-t-2 border-dashed border-gray-200 pt-3 mt-1">
+                <span className="font-bold text-gray-900">Total payable</span>
+                <span className="text-2xl font-black text-gray-900 tracking-tight">
+                  ₹{summary?.totalPayable ?? fallbackTotal}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <div className="border-t border-gray-200 pt-4 mb-4 text-sm">
-            <div className="flex justify-between mb-1">
-              <span className="text-gray-600">Items total</span>
-              <span className="font-medium text-gray-900">
-                ₹
-                {summary?.subtotal ??
-                  cart.items.reduce(
-                    (sum, item) =>
-                      sum + item.menuItem.price * (item.quantity || 1),
-                    0,
-                  )}
-              </span>
-            </div>
-            <div className="flex justify-between mb-1">
-              <span className="text-gray-600">Discount</span>
-              <span className="font-medium text-emerald-700">
-                -₹{summary?.discountApplied ?? 0}
-              </span>
-            </div>
-            <div className="flex justify-between mb-1">
-              <span className="text-gray-600">Delivery Charges</span>
-              <span className="font-medium text-gray-900">₹0</span>
-            </div>
-            <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-gray-200">
-              <span className="text-gray-900 font-semibold">Total payable</span>
-              <span className="text-lg font-bold text-gray-900">
-                ₹
-                {summary?.totalPayable ??
-                  cart.items.reduce(
-                    (sum, item) =>
-                      sum + item.menuItem.price * (item.quantity || 1),
-                    0,
-                  )}
-              </span>
-            </div>
-            {summaryError && (
-              <p className="text-xs text-red-600 mt-1">{summaryError}</p>
-            )}
+            {/* Pay button */}
+            <button
+              onClick={handlePayment}
+              disabled={checkingOut}
+              className="w-full mt-5 flex items-center justify-center gap-2 py-3.5 bg-red-500 text-white font-bold text-sm rounded-xl hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-lg hover:shadow-red-500/25 hover:-translate-y-0.5 transition-all duration-200"
+            >
+              {checkingOut && (
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              )}
+              {checkingOut ? "Placing order…" : "Pay & Place Order"}
+            </button>
           </div>
-
-          <Button
-            type="button"
-            onClick={handlePayment}
-            loading={checkingOut}
-            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white focus:ring-red-500"
-          >
-            {checkingOut ? "Placing order..." : "Pay & Place Order"}
-          </Button>
         </div>
       </main>
     </div>
