@@ -33,6 +33,8 @@ import OwnerOffers from "./pages/owner/Offers";
 // Delivery
 import DeliveryLayout from "./layouts/DeliveryLayout";
 import DeliveryDashboard from "./pages/delivery/Dashboard";
+import ResetPassword from "./pages/ResetPassword";
+import ForgotPassword from "./pages/ForgotPassword";
 
 function App() {
   return (
@@ -45,6 +47,8 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
 
         <Route path="/restaurant/:id" element={<RestaurantDetails />} />
 

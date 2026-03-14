@@ -89,7 +89,7 @@ export default function Login() {
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 bg-[#FFFDF9]">
       {/* ── Left panel (desktop only) ── */}
-      <div className="hidden md:flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-br from-[#FFF9F2] via-[#FFF1F3] to-[#FFF5E8] border-r border-[#EDE8DF] px-12 py-16">
+      <div className="hidden md:flex flex-col items-center justify-center relative overflow-hidden bg-linear-to-br from-[#FFF9F2] via-[#FFF1F3] to-[#FFF5E8] border-r border-[#EDE8DF] px-12 py-16">
         {/* Blobs */}
         <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-red-200/55 blur-[70px] pointer-events-none" />
         <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full bg-amber-200/45 blur-[65px] pointer-events-none" />
@@ -179,9 +179,20 @@ export default function Login() {
 
             {/* Password */}
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-widest text-[#4A3F34] mb-1.5">
+              {/* <label className="block text-[11px] font-bold uppercase tracking-widest text-[#4A3F34] mb-1.5">
                 Password
-              </label>
+              </label> */}
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-widest text-[#4A3F34]">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-[11px] font-bold text-red-500 hover:underline uppercase tracking-widest"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   type={showPass ? "text" : "password"}
