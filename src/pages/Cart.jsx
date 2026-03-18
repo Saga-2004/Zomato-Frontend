@@ -161,31 +161,63 @@ function Cart() {
         order_id: id,
         name: "Zomato Clone",
         handler: async function (response) {
-          const verifyRes = await API.post("/payment/verify-payment", response);
-          if (verifyRes.data.success) {
-            await API.put(`/orders/${orderId}/pay`, {
-              paymentId: response.razorpay_payment_id,
-            });
-            alert("Payment Successful 🎉");
-            navigate("/my-orders");
+          try {
+            const verifyRes = await API.post(
+              "/payment/verify-payment",
+              response,
+            );
+
+            if (verifyRes.data.success) {
+              await API.put(`/orders/${orderId}/pay`, {
+                paymentId: response.razorpay_payment_id,
+              });
+              alert("Payment Successful 🎉");
+              navigate("/my-orders");
+              return;
+            }
+
+            await API.put(`/orders/${orderId}/payment-pending`);
+            window.dispatchEvent(
+              new CustomEvent("appToast", {
+                detail: {
+                  message:
+                    "Payment verification failed. Order is still pending.",
+                  type: "error",
+                },
+              }),
+            );
+          } catch (err) {
+            await API.put(`/orders/${orderId}/payment-pending`).catch(() => {});
+            window.dispatchEvent(
+              new CustomEvent("appToast", {
+                detail: {
+                  message:
+                    err.response?.data?.message ||
+                    "Payment could not be completed. Order is pending.",
+                  type: "error",
+                },
+              }),
+            );
+          } finally {
+            setCheckingOut(false);
           }
         },
         modal: {
           ondismiss: async function () {
-            try {
-              await API.delete(`/orders/${orderId}/cancel-pending`);
-            } catch (err) {
-              if (
-                err.response?.status &&
-                ![404, 401, 403].includes(err.response.status)
-              )
-                console.warn("Failed to delete pending order:", err.message);
-            }
+            await API.put(`/orders/${orderId}/payment-pending`).catch(() => {});
             setCheckingOut(false);
           },
         },
       };
-      new window.Razorpay(options).open();
+
+      const razorpay = new window.Razorpay(options);
+
+      razorpay.on("payment.failed", async () => {
+        await API.put(`/orders/${orderId}/payment-pending`).catch(() => {});
+        setCheckingOut(false);
+      });
+
+      razorpay.open();
     } catch (error) {
       alert(error.response?.data?.message || "Payment failed");
       setCheckingOut(false);

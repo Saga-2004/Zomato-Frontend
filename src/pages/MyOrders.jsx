@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API from "../api/axios";
 import Navbar from "../components/Navbar";
+import { loadRazorpay } from "../utils/loadRazorpay";
 
 function statusStyle(status) {
   const s = (status || "").toLowerCase();
@@ -51,13 +52,127 @@ function OrderSkeleton() {
 export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [repayingOrderId, setRepayingOrderId] = useState(null);
+
+  const toast = (message, type = "info") => {
+    window.dispatchEvent(
+      new CustomEvent("appToast", { detail: { message, type } }),
+    );
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const r = await API.get("/orders/my-orders");
+      setOrders(r.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    API.get("/orders/my-orders")
-      .then((r) => setOrders(r.data))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    fetchOrders();
   }, []);
+
+  const canRetryPayment = (order) => {
+    const blockedOrderStatuses = ["Cancelled", "Returned", "Refunded"];
+    return (
+      order?.paymentStatus === "Pending" &&
+      !blockedOrderStatuses.includes(order?.status)
+    );
+  };
+
+  const handleRepay = async (order) => {
+    if (!order?._id || repayingOrderId) return;
+
+    const sdkLoaded = await loadRazorpay();
+    if (!sdkLoaded) {
+      toast("Razorpay SDK failed to load", "error");
+      return;
+    }
+
+    setRepayingOrderId(order._id);
+
+    try {
+      await API.put(`/orders/${order._id}/payment-pending`);
+
+      const rzpOrder = await API.post("/payment/create-order", {
+        amount: order.totalAmount,
+      });
+
+      const { id, amount, currency } = rzpOrder.data;
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount,
+        currency,
+        order_id: id,
+        name: "Zomato Clone",
+        handler: async function (response) {
+          try {
+            const verifyRes = await API.post(
+              "/payment/verify-payment",
+              response,
+            );
+
+            if (!verifyRes.data?.success) {
+              await API.put(`/orders/${order._id}/payment-pending`).catch(
+                () => {},
+              );
+              toast(
+                "Payment verification failed. Order is still pending.",
+                "error",
+              );
+              return;
+            }
+
+            await API.put(`/orders/${order._id}/pay`, {
+              paymentId: response.razorpay_payment_id,
+            });
+
+            toast("Payment successful", "success");
+            await fetchOrders();
+          } catch (err) {
+            await API.put(`/orders/${order._id}/payment-pending`).catch(
+              () => {},
+            );
+            toast(
+              err.response?.data?.message ||
+                "Payment failed. You can retry from My Orders.",
+              "error",
+            );
+          } finally {
+            setRepayingOrderId(null);
+          }
+        },
+        modal: {
+          ondismiss: async function () {
+            await API.put(`/orders/${order._id}/payment-pending`).catch(
+              () => {},
+            );
+            setRepayingOrderId(null);
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+
+      razorpay.on("payment.failed", async () => {
+        await API.put(`/orders/${order._id}/payment-pending`).catch(() => {});
+        toast("Payment failed. Please retry.", "error");
+        setRepayingOrderId(null);
+      });
+
+      razorpay.open();
+    } catch (err) {
+      toast(
+        err.response?.data?.message || "Unable to start re-payment",
+        "error",
+      );
+      setRepayingOrderId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#FFFDF9]">
@@ -216,21 +331,40 @@ export default function MyOrders() {
                 )}
 
                 {/* Timestamp */}
-                <div className="flex items-center justify-end gap-1.5 text-[11.5px] text-[#9C9088] font-medium">
-                  <svg
-                    className="w-3 h-3"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                  {new Date(order.createdAt).toLocaleString("en-IN", {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  {canRetryPayment(order) ? (
+                    <button
+                      onClick={() => handleRepay(order)}
+                      disabled={repayingOrderId === order._id}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {repayingOrderId === order._id ? (
+                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : null}
+                      {repayingOrderId === order._id
+                        ? "Processing..."
+                        : "Re-pay now"}
+                    </button>
+                  ) : (
+                    <span />
+                  )}
+
+                  <div className="flex items-center justify-end gap-1.5 text-[11.5px] text-[#9C9088] font-medium">
+                    <svg
+                      className="w-3 h-3"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    {new Date(order.createdAt).toLocaleString("en-IN", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </div>
                 </div>
               </li>
             ))}

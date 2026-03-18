@@ -1,5 +1,23 @@
 import { Link } from "react-router-dom";
 
+const RESTAURANT_FALLBACK_IMAGE =
+  "data:image/svg+xml;charset=UTF-8," +
+  encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">
+      <defs>
+        <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f8fafc"/>
+          <stop offset="100%" stop-color="#e2e8f0"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="250" fill="url(#bg)"/>
+      <g fill="#64748b" font-family="Arial, sans-serif" text-anchor="middle">
+        <text x="200" y="120" font-size="22" font-weight="700">Restaurant</text>
+        <text x="200" y="148" font-size="14">Image unavailable</text>
+      </g>
+    </svg>
+  `);
+
 export function RestaurantCardSkeleton() {
   return (
     <div className="bg-[#141010] rounded-2xl border border-white/5 overflow-hidden animate-pulse">
@@ -14,16 +32,19 @@ export function RestaurantCardSkeleton() {
 }
 
 function RestaurantCard({ restaurant }) {
+  const restaurantId = restaurant?._id || restaurant?.id;
+
   // Simple white card with responsiveness using Tailwind CSS
-  return (
+  const cardContent = (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden max-w-xs w-full mx-auto transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg flex flex-col items-center">
       {/* Small Image with white border */}
       <div className="w-full border-b-4 border-white shadow-md overflow-hidden bg-gray-100 flex items-center justify-center">
         <img
-          src={
-            restaurant?.image ||
-            "https://via.placeholder.com/400x250?text=Restaurant"
-          }
+          src={restaurant?.image || RESTAURANT_FALLBACK_IMAGE}
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = RESTAURANT_FALLBACK_IMAGE;
+          }}
           alt={restaurant?.restaurant_name || "Restaurant"}
           className="w-full h-56 object-cover"
         />
@@ -59,6 +80,21 @@ function RestaurantCard({ restaurant }) {
         </div>
       </div>
     </div>
+  );
+
+  if (!restaurantId) {
+    return cardContent;
+  }
+
+  return (
+    <Link
+      to={`/restaurant/${restaurantId}`}
+      state={{ restaurant }}
+      className="block"
+      aria-label={`Open ${restaurant?.restaurant_name || "restaurant"} details`}
+    >
+      {cardContent}
+    </Link>
   );
 }
 
