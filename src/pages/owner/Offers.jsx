@@ -33,6 +33,8 @@ function OwnerOffers() {
     code: "",
     discountPercent: "",
     maxDiscount: "",
+    minOrderAmount: "",
+    maxUses: "",
     validTill: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -77,12 +79,16 @@ function OwnerOffers() {
         code: form.code.trim(),
         discountPercent: Number(form.discountPercent),
         maxDiscount: Number(form.maxDiscount),
+        minOrderAmount: Number(form.minOrderAmount) || 0,
+        maxUses: Number(form.maxUses) || null,
         validTill: form.validTill,
       });
       setForm({
         code: "",
         discountPercent: "",
         maxDiscount: "",
+        minOrderAmount: "",
+        maxUses: "",
         validTill: "",
       });
       setSuccess("Coupon created successfully!");
@@ -220,6 +226,34 @@ function OwnerOffers() {
                 </div>
               </div>
 
+              {/* Minimum order + Usage limit */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Min Order Total (₹)</label>
+                  <input
+                    type="number"
+                    name="minOrderAmount"
+                    value={form.minOrderAmount}
+                    onChange={handleChange}
+                    min="0"
+                    placeholder="e.g. 299"
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Usage Limit</label>
+                  <input
+                    type="number"
+                    name="maxUses"
+                    value={form.maxUses}
+                    onChange={handleChange}
+                    min="1"
+                    placeholder="e.g. 100"
+                    className={inputCls}
+                  />
+                </div>
+              </div>
+
               {/* Preview pill */}
               {form.code && form.discountPercent && form.maxDiscount && (
                 <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
@@ -230,6 +264,10 @@ function OwnerOffers() {
                     </p>
                     <p className="text-xs text-red-400">
                       {form.discountPercent}% off · Max ₹{form.maxDiscount}
+                      {form.minOrderAmount
+                        ? ` · Min ₹${form.minOrderAmount}`
+                        : ""}
+                      {form.maxUses ? ` · Uses ${form.maxUses}` : ""}
                     </p>
                   </div>
                 </div>
@@ -337,6 +375,12 @@ function OwnerOffers() {
                         <p className="text-xs text-gray-500 mt-0.5">
                           {coupon.discountPercent}% off · Max ₹
                           {coupon.maxDiscount}
+                          {coupon.minOrderAmount
+                            ? ` · Min ₹${coupon.minOrderAmount}`
+                            : ""}
+                          {coupon.maxUses
+                            ? ` · Uses ${coupon.usedCount || 0}/${coupon.maxUses}`
+                            : ""}
                         </p>
                         {coupon.validTill && (
                           <p className="text-[11px] text-gray-400 mt-0.5">
@@ -375,6 +419,12 @@ function OwnerOffers() {
                         <p className="text-xs text-gray-400 mt-0.5">
                           {coupon.discountPercent}% off · Max ₹
                           {coupon.maxDiscount}
+                          {coupon.minOrderAmount
+                            ? ` · Min ₹${coupon.minOrderAmount}`
+                            : ""}
+                          {coupon.maxUses
+                            ? ` · Uses ${coupon.usedCount || 0}/${coupon.maxUses}`
+                            : ""}
                         </p>
                         {coupon.validTill && (
                           <p className="text-[11px] text-red-400 mt-0.5">

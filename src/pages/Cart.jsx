@@ -75,21 +75,21 @@ function Cart() {
   const fetchSummary = async (code = "") => {
     if (!cart?.items?.length) {
       setSummary(null);
-      return false;
+      return { ok: false, errorMessage: null };
     }
     try {
       setSummaryError(null);
       const res = await API.post("/cart/summary", { couponCode: code });
       setSummary(res.data);
-      return true;
+      return { ok: true, errorMessage: null };
     } catch (err) {
       setSummary(null);
-      setSummaryError(
+      const message =
         err.response?.data?.message ||
-          err.message ||
-          "Failed to calculate summary",
-      );
-      return false;
+        err.message ||
+        "Failed to calculate summary";
+      setSummaryError(message);
+      return { ok: false, errorMessage: message };
     }
   };
 
@@ -100,14 +100,30 @@ function Cart() {
   const handleApplyCoupon = async () => {
     setApplying(true);
     try {
-      const ok = await fetchSummary(couponCode);
+      const { ok, errorMessage } = await fetchSummary(couponCode);
       if (ok) {
         setAppliedCoupon(couponCode);
         setSummaryError(null);
-      } else setAppliedCoupon("INVALID");
+      } else {
+        setAppliedCoupon("INVALID");
+        if (errorMessage) {
+          window.dispatchEvent(
+            new CustomEvent("appToast", {
+              detail: { message: errorMessage, type: "error" },
+            }),
+          );
+        }
+      }
     } finally {
       setApplying(false);
     }
+  };
+
+  const handleRemoveCoupon = async () => {
+    setCouponCode("");
+    setAppliedCoupon("");
+    setSummaryError(null);
+    await fetchSummary("");
   };
 
   const removeItem = async (itemId) => {
@@ -159,7 +175,7 @@ function Cart() {
         amount,
         currency,
         order_id: id,
-        name: "Zomato Clone",
+        name: "LetsEat",
         handler: async function (response) {
           try {
             const verifyRes = await API.post(
@@ -444,9 +460,18 @@ function Cart() {
                   Invalid coupon code
                 </p>
               ) : appliedCoupon && !summaryError ? (
-                <p className="text-xs font-semibold text-emerald-600 mt-1.5">
-                  ✓ Coupon <strong>{appliedCoupon}</strong> applied!
-                </p>
+                <div className="flex items-center justify-between text-xs font-semibold text-emerald-600 mt-1.5">
+                  <p>
+                    ✓ Coupon <strong>{appliedCoupon}</strong> applied!
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="text-emerald-700 hover:text-emerald-900 underline underline-offset-2"
+                  >
+                    Remove
+                  </button>
+                </div>
               ) : null}
             </div>
 

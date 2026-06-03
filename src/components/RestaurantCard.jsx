@@ -20,12 +20,12 @@ const RESTAURANT_FALLBACK_IMAGE =
 
 export function RestaurantCardSkeleton() {
   return (
-    <div className="bg-[#141010] rounded-2xl border border-white/5 overflow-hidden animate-pulse">
-      <div className="h-48 bg-gradient-to-r from-[#1e1818] via-[#251d1d] to-[#1e1818]" />
-      <div className="p-4 space-y-3">
-        <div className="h-4 bg-[#1e1818] rounded-full w-2/3" />
-        <div className="h-3 bg-[#1e1818] rounded-full w-5/6" />
-        <div className="h-3 bg-[#1e1818] rounded-full w-1/3 mt-1" />
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
+      <div className="h-56 bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100" />
+      <div className="p-5 space-y-3">
+        <div className="h-4 bg-gray-100 rounded-full w-2/3" />
+        <div className="h-3 bg-gray-100 rounded-full w-5/6" />
+        <div className="h-3 bg-gray-100 rounded-full w-1/3 mt-1" />
       </div>
     </div>
   );
@@ -36,9 +36,8 @@ function RestaurantCard({ restaurant }) {
 
   // Simple white card with responsiveness using Tailwind CSS
   const cardContent = (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden max-w-xs w-full mx-auto transition-transform duration-200 hover:-translate-y-1 hover:shadow-lg flex flex-col items-center">
-      {/* Small Image with white border */}
-      <div className="w-full border-b-4 border-white shadow-md overflow-hidden bg-gray-100 flex items-center justify-center">
+    <div className="group relative bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+      <div className="absolute inset-0">
         <img
           src={restaurant?.image || RESTAURANT_FALLBACK_IMAGE}
           onError={(e) => {
@@ -46,36 +45,41 @@ function RestaurantCard({ restaurant }) {
             e.currentTarget.src = RESTAURANT_FALLBACK_IMAGE;
           }}
           alt={restaurant?.restaurant_name || "Restaurant"}
-          className="w-full h-56 object-cover"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
-      {/* Content */}
-      <div className="p-4 flex flex-col flex-1 items-start w-full">
-        <h2 className="text-lg font-semibold text-gray-900 truncate mb-1 w-full">
-          {restaurant?.restaurant_name || "Restaurant Name"}
-        </h2>
-        <div className="text-gray-600 text-sm w-full mb-2">
-          <div>{restaurant?.restaurant_address || "Address"}</div>
-          {restaurant?.cuisine && (
-            <div className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded-full mt-1">
-              {restaurant.cuisine}
-            </div>
-          )}
-          {restaurant?.averageRating && (
-            <div className="inline-block bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full mt-1 ml-2">
-              ★ {Number(restaurant.averageRating).toFixed(1)}
-            </div>
-          )}
-          {restaurant?.preparationTime && (
-            <div className="inline-block bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full mt-1 ml-2">
-              {restaurant.preparationTime} min
-            </div>
-          )}
+
+      <div className="relative z-10 p-5 sm:p-6 min-h-[220px] flex flex-col justify-end">
+        <div className="bg-white/92 backdrop-blur-md border border-white/60 rounded-2xl p-4 transition-all duration-300 group-hover:bg-black/35 group-hover:border-white/20">
+          <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight truncate group-hover:text-white">
+            {restaurant?.restaurant_name || "Restaurant Name"}
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate group-hover:text-white/85">
+            {restaurant?.restaurant_address || "Address"}
+          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px]">
+            {restaurant?.cuisine && (
+              <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 font-semibold group-hover:bg-white/20 group-hover:text-white">
+                {restaurant.cuisine}
+              </span>
+            )}
+            {restaurant?.averageRating && (
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold group-hover:bg-emerald-400/30 group-hover:text-white">
+                ★ {Number(restaurant.averageRating).toFixed(1)}
+              </span>
+            )}
+            {restaurant?.preparationTime && (
+              <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold group-hover:bg-amber-400/30 group-hover:text-white">
+                {restaurant.preparationTime} min
+              </span>
+            )}
+          </div>
           {Array.isArray(restaurant?.restaurant_deliveryPincodes) &&
             restaurant.restaurant_deliveryPincodes.length > 0 && (
-              <div className="mt-2 text-xs text-gray-500">
+              <p className="text-[11px] text-gray-500 mt-2 group-hover:text-white/70">
                 Pincodes: {restaurant.restaurant_deliveryPincodes.join(", ")}
-              </div>
+              </p>
             )}
         </div>
       </div>

@@ -112,7 +112,7 @@ export default function Register() {
             className="font-black text-2xl text-[#1A1208] tracking-tight"
             style={{ fontFamily: "Georgia, serif" }}
           >
-            Tomato
+            LetsEat
           </span>
         </Link>
 

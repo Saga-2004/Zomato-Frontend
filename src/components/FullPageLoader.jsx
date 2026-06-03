@@ -65,7 +65,7 @@ export default function FullPageLoader() {
 
       {/* Wordmark */}
       <span className="text-white/20 text-sm font-bold uppercase tracking-[0.22em] animate-pulse">
-        Tomato
+        LetsEat
       </span>
     </div>
   );

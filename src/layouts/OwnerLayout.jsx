@@ -147,7 +147,7 @@ function OwnerLayout({ children }) {
             className="font-black text-lg text-gray-900 tracking-tight group-hover:text-red-500 transition-colors"
             style={{ fontFamily: "Georgia, serif" }}
           >
-            Tomato
+            LetsEat
           </span>
         </Link>
         <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mt-2 ml-0.5">

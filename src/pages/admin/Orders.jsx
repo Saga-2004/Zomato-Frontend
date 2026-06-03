@@ -58,6 +58,8 @@ function Orders() {
   const [updatingId, setUpdatingId] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -131,6 +133,23 @@ function Orders() {
     fetchOrders();
   }, []);
 
+  const isWithinRange = (createdAt) => {
+    if (!dateFrom && !dateTo) return true;
+    const created = new Date(createdAt);
+    if (Number.isNaN(created.getTime())) return false;
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (created < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (created > to) return false;
+    }
+    return true;
+  };
+
   const filtered = orders
     .filter(
       (o) =>
@@ -145,7 +164,8 @@ function Orders() {
           .includes(search.toLowerCase()) ||
         o.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
         o.user?.email?.toLowerCase().includes(search.toLowerCase()),
-    );
+    )
+    .filter((o) => isWithinRange(o.createdAt));
 
   return (
     <div className="space-y-6">
@@ -210,6 +230,21 @@ function Orders() {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-3">
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={(e) => setDateFrom(e.target.value)}
+          className="px-3 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-gray-600 shadow-sm focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 transition"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={(e) => setDateTo(e.target.value)}
+          className="px-3 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-gray-600 shadow-sm focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 transition"
+        />
       </div>
 
       {/* Summary chips */}

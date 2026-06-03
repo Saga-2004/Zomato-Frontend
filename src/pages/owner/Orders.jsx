@@ -88,6 +88,8 @@ function OwnerOrders() {
   const [error, setError] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -145,10 +147,28 @@ function OwnerOrders() {
       ),
   );
 
+  const isWithinRange = (createdAt) => {
+    if (!dateFrom && !dateTo) return true;
+    const created = new Date(createdAt);
+    if (Number.isNaN(created.getTime())) return false;
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (created < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (created > to) return false;
+    }
+    return true;
+  };
+
   const filteredOrders =
     activeFilter === "all"
       ? orders
       : orders.filter((o) => (o.status || "").toLowerCase() === activeFilter);
+  const dateFiltered = filteredOrders.filter((o) => isWithinRange(o.createdAt));
 
   const countOf = (key) =>
     key === "all"
@@ -415,6 +435,23 @@ function OwnerOrders() {
         </div>
       )}
 
+      {!loading && !error && orders.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="px-3 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-gray-600 shadow-sm focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 transition"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="px-3 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-gray-600 shadow-sm focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 transition"
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="space-y-3">
           <OrderSkeleton />
@@ -445,7 +482,7 @@ function OwnerOrders() {
             Incoming orders will appear here in real time.
           </p>
         </div>
-      ) : filteredOrders.length === 0 ? (
+      ) : dateFiltered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 py-14 px-6 text-center shadow-sm">
           <div className="text-4xl mb-3">🔍</div>
           <p
@@ -467,7 +504,7 @@ function OwnerOrders() {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredOrders.map((order, idx) => (
+          {dateFiltered.map((order, idx) => (
             <OrderCard key={order._id} order={order} idx={idx} />
           ))}
         </div>

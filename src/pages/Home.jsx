@@ -8,6 +8,8 @@ import RestaurantCard, {
 
 export default function Home() {
   const [restaurants, setRestaurants] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
+  const [menuLoading, setMenuLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [pincode, setPincode] = useState(() => {
     const p = new URLSearchParams(window.location.search);
@@ -26,6 +28,22 @@ export default function Home() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [pincode]);
+
+  useEffect(() => {
+    const query = search.trim();
+    if (!query) {
+      setMenuItems([]);
+      return;
+    }
+    setMenuLoading(true);
+    const url = `/menu/search?q=${encodeURIComponent(query)}${
+      pincode ? `&pincode=${encodeURIComponent(pincode)}` : ""
+    }`;
+    API.get(url)
+      .then((r) => setMenuItems(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setMenuItems([]))
+      .finally(() => setMenuLoading(false));
+  }, [search, pincode]);
 
   useEffect(() => {
     const p = new URLSearchParams(location.search);
@@ -124,7 +142,7 @@ export default function Home() {
               </svg>
               <input
                 type="text"
-                placeholder="Search restaurants or cuisines…"
+                placeholder="Search restaurants or food items…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoComplete="off"
@@ -201,6 +219,65 @@ export default function Home() {
           )}
         </div>
 
+        {/* Food items results */}
+        {!loading && search && (
+          <div className="mb-10">
+            <div className="flex items-end justify-between flex-wrap gap-2 mb-4">
+              <h3 className="text-lg sm:text-xl font-black text-[#1A1208] tracking-tight">
+                Food items
+              </h3>
+              <span className="text-xs font-semibold text-gray-400">
+                {menuLoading ? "Searching…" : `${menuItems.length} item(s)`}
+              </span>
+            </div>
+
+            {menuLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-white rounded-2xl border border-gray-100 p-4 h-24 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : menuItems.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 text-sm text-gray-400">
+                No food items match your search yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                {menuItems.map((item) => {
+                  const price =
+                    typeof item.price === "number"
+                      ? item.price
+                      : item.variants?.[0]?.price || 0;
+                  return (
+                    <div
+                      key={item._id}
+                      className="bg-white rounded-2xl border border-gray-100 p-4 flex gap-4 items-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+                    >
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-20 h-20 rounded-xl object-cover border border-gray-100"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-gray-900 truncate">
+                          {item.name}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate">
+                          {item.restaurant?.restaurant_name || "Restaurant"}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">₹{price}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Loading */}
         {loading ? (
           <>
@@ -210,7 +287,7 @@ export default function Home() {
                 Finding the best spots near you…
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
               {Array.from({ length: 8 }).map((_, i) => (
                 <RestaurantCardSkeleton key={i} />
               ))}
@@ -244,7 +321,7 @@ export default function Home() {
           </div>
         ) : (
           /* Grid */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {filtered.map((item, idx) => (
               <div
                 key={item._id}
@@ -262,8 +339,8 @@ export default function Home() {
       <footer className="border-t border-[#EDE8DF] bg-white py-6 px-5">
         <div className="max-w-screen-xl mx-auto flex items-center justify-between flex-wrap gap-3">
           <p className="text-sm text-gray-400 font-medium">
-            © {new Date().getFullYear()} Tomato — Delivering happiness, one meal
-            at a time 🍜
+            © {new Date().getFullYear()} LetsEat — Delivering happiness, one
+            meal at a time 🍜
           </p>
           <div className="flex gap-5">
             {["About", "Help", "Privacy", "Terms"].map((link) => (

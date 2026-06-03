@@ -1,6 +1,6 @@
-# Zomato Clone Frontend
+# LetsEat Frontend
 
-React + Vite frontend for the Zomato-style food ordering platform. This client supports customer, admin, restaurant owner, and delivery partner workflows with protected routes and role-based dashboards.
+React + Vite frontend for the LetsEat food ordering platform. This client supports customer, admin, restaurant owner, and delivery partner workflows with protected routes and role-based dashboards.
 
 ## Live URL
 

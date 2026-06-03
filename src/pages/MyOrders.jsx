@@ -53,6 +53,8 @@ export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [repayingOrderId, setRepayingOrderId] = useState(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const toast = (message, type = "info") => {
     window.dispatchEvent(
@@ -74,6 +76,25 @@ export default function MyOrders() {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const isWithinRange = (createdAt) => {
+    if (!dateFrom && !dateTo) return true;
+    const created = new Date(createdAt);
+    if (Number.isNaN(created.getTime())) return false;
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (created < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (created > to) return false;
+    }
+    return true;
+  };
+
+  const dateFiltered = orders.filter((o) => isWithinRange(o.createdAt));
 
   const canRetryPayment = (order) => {
     const blockedOrderStatuses = ["Cancelled", "Returned", "Refunded"];
@@ -108,7 +129,7 @@ export default function MyOrders() {
         amount,
         currency,
         order_id: id,
-        name: "Zomato Clone",
+        name: "LetsEat",
         handler: async function (response) {
           try {
             const verifyRes = await API.post(
@@ -199,10 +220,27 @@ export default function MyOrders() {
           )}
         </div>
 
+        {!loading && orders.length > 0 && (
+          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="px-3 py-2.5 bg-white border border-[#EDE8DF] rounded-xl text-sm text-[#9C9088] shadow-sm focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 transition"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="px-3 py-2.5 bg-white border border-[#EDE8DF] rounded-xl text-sm text-[#9C9088] shadow-sm focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 transition"
+            />
+          </div>
+        )}
+
         {/* Loading */}
         {loading ? (
           <OrderSkeleton />
-        ) : orders.length === 0 ? (
+        ) : dateFiltered.length === 0 ? (
           /* Empty state */
           <div className="flex flex-col items-center gap-4 bg-white border-2 border-dashed border-[#DDD8CE] rounded-2xl py-20 px-6 text-center">
             <span className="text-5xl">📋</span>
@@ -237,7 +275,7 @@ export default function MyOrders() {
         ) : (
           /* Orders list */
           <ul className="space-y-3.5 p-0 list-none">
-            {orders.map((order, idx) => (
+            {dateFiltered.map((order, idx) => (
               <li
                 key={order._id}
                 className="bg-white border border-[#EDE8DF] hover:border-[#DDD8CE] rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-[fadeUp_0.4s_ease_both]"

@@ -64,6 +64,8 @@ function DeliveryDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -139,6 +141,25 @@ function DeliveryDashboard() {
       ),
   ).length;
 
+  const isWithinRange = (createdAt) => {
+    if (!dateFrom && !dateTo) return true;
+    const created = new Date(createdAt);
+    if (Number.isNaN(created.getTime())) return false;
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      if (created < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      if (created > to) return false;
+    }
+    return true;
+  };
+
+  const dateFiltered = orders.filter((o) => isWithinRange(o.createdAt));
+
   return (
     <div>
       {/* Page header */}
@@ -198,6 +219,23 @@ function DeliveryDashboard() {
         </div>
       )}
 
+      {!loading && !error && orders.length > 0 && (
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="px-3 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-gray-600 shadow-sm focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 transition"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="px-3 py-2.5 bg-white border border-gray-100 rounded-xl text-sm text-gray-600 shadow-sm focus:outline-none focus:border-red-300 focus:ring-2 focus:ring-red-50 transition"
+          />
+        </div>
+      )}
+
       {/* Loading */}
       {loading ? (
         <div className="space-y-3">
@@ -216,7 +254,7 @@ function DeliveryDashboard() {
             Retry
           </button>
         </div>
-      ) : orders.length === 0 ? (
+      ) : dateFiltered.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center shadow-sm">
           <div className="text-5xl mb-4">🛵</div>
           <p
@@ -231,7 +269,7 @@ function DeliveryDashboard() {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order, idx) => {
+          {dateFiltered.map((order, idx) => {
             const { cls, dot, bar } = statusConfig(order.status);
             const isAssigned = Boolean(order.deliveryPartner);
             const isUpdating = updatingId === order._id;
