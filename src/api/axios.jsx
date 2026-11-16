@@ -6,8 +6,9 @@ const API = axios.create({
 
 // INTERCEPTOR
 API.interceptors.request.use((req) => {
-  // dispatch global loader start
-  window.dispatchEvent(new Event("loadingStart"));
+  if (req.skipLoader !== true) {
+    window.dispatchEvent(new Event("loadingStart"));
+  }
 
   const userInfo = JSON.parse(localStorage.getItem("userInfo"));
 
@@ -21,11 +22,15 @@ API.interceptors.request.use((req) => {
 // hide loader on response / error
 API.interceptors.response.use(
   (res) => {
-    window.dispatchEvent(new Event("loadingEnd"));
+    if (res.config?.skipLoader !== true) {
+      window.dispatchEvent(new Event("loadingEnd"));
+    }
     return res;
   },
   (err) => {
-    window.dispatchEvent(new Event("loadingEnd"));
+    if (err.config?.skipLoader !== true) {
+      window.dispatchEvent(new Event("loadingEnd"));
+    }
     return Promise.reject(err);
   },
 );

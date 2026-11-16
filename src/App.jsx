@@ -3,6 +3,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Toast from "./components/Toast";
 import FullPageLoader from "./components/FullPageLoader";
 import BottomNav from "./components/BottomNav";
+import AIChatbot from "./components/AIChatbot";
 
 // Public Pages
 import Home from "./pages/Home";
@@ -233,6 +234,7 @@ function App() {
           }
         />
       </Routes>
+      <AIChatbot />
       <BottomNav />
     </>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import API from "../../api/axios";
+import MenuDescriptionGenerator from "../../components/MenuDescriptionGenerator";
 
 const inputCls =
   "w-full bg-[#FBF7F0] border border-[#EDE8DF] rounded-xl px-4 py-3 text-sm font-medium text-[#1A1208] placeholder-[#9C9088] outline-none focus:border-red-400 focus:ring-2 focus:ring-red-50 focus:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition";
@@ -26,8 +27,14 @@ function OwnerMenu() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("veg");
+  const [category, setCategory] = useState("other");
+  const [isVeg, setIsVeg] = useState(true);
   const [price, setPrice] = useState("");
+  const [spiceLevel, setSpiceLevel] = useState("mild");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
+  const [allergens, setAllergens] = useState("");
+  const [aiGenerated, setAiGenerated] = useState(false);
   const [isAvailable, setIsAvailable] = useState(true);
   const [variants, setVariants] = useState([]);
   const [variantName, setVariantName] = useState("");
@@ -45,8 +52,14 @@ function OwnerMenu() {
     setImageFile(null);
     setImagePreview(null);
     setName("");
-    setCategory("veg");
+    setCategory("other");
+    setIsVeg(true);
     setPrice("");
+    setSpiceLevel("mild");
+    setDescription("");
+    setTags("");
+    setAllergens("");
+    setAiGenerated(false);
     setIsAvailable(true);
     setEditingId(null);
     setVariants([]);
@@ -112,7 +125,13 @@ function OwnerMenu() {
     if (imageFile) formData.append("image", imageFile);
     formData.append("name", name.trim());
     formData.append("category", category);
+    formData.append("isVeg", String(isVeg));
     formData.append("isAvailable", String(isAvailable));
+    formData.append("spiceLevel", spiceLevel);
+    formData.append("description", description.trim());
+    formData.append("tags", JSON.stringify(tags.split(",").map((tag) => tag.trim()).filter(Boolean)));
+    formData.append("allergens", JSON.stringify(allergens.split(",").map((item) => item.trim()).filter(Boolean)));
+    formData.append("aiGenerated", String(aiGenerated));
     if (variants.length > 0) {
       formData.append(
         "variants",
@@ -170,8 +189,14 @@ function OwnerMenu() {
   const startEdit = (item) => {
     setEditingId(item._id);
     setName(item.name || "");
-    setCategory(item.category || "veg");
+    setCategory(item.category === "veg" || item.category === "non-veg" ? "other" : item.category || "other");
+    setIsVeg(item.isVeg ?? item.category !== "non-veg");
     setPrice(item.price != null ? String(item.price) : "");
+    setSpiceLevel(item.spiceLevel || "mild");
+    setDescription(item.description || "");
+    setTags(Array.isArray(item.tags) ? item.tags.join(", ") : "");
+    setAllergens(Array.isArray(item.allergens) ? item.allergens.join(", ") : "");
+    setAiGenerated(Boolean(item.aiGenerated));
     setIsAvailable(item.isAvailable ?? true);
     setImageFile(null);
     setImagePreview(item.image || null);
@@ -208,6 +233,13 @@ function OwnerMenu() {
   };
 
   const hasVariants = variants.length > 0;
+  const applyAIGeneration = (generated) => {
+    setDescription(generated.description || "");
+    setTags((generated.tags || []).join(", "));
+    setSpiceLevel(generated.spiceLevel || "mild");
+    setAllergens((generated.allergens || []).join(", "));
+    setAiGenerated(true);
+  };
 
   return (
     <div>
@@ -358,19 +390,19 @@ function OwnerMenu() {
                 />
               </div>
 
-              {/* Category */}
+              {/* Dietary type */}
               <div>
-                <label className={labelCls}>Category</label>
+                <label className={labelCls}>Dietary type</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { value: "veg", label: "🥗 Veg", color: "emerald" },
-                    { value: "non-veg", label: "🍗 Non-veg", color: "red" },
+                    { value: true, label: "🥗 Veg", color: "emerald" },
+                    { value: false, label: "🍗 Non-veg", color: "red" },
                   ].map(({ value, label, color }) => (
                     <label
                       key={value}
                       className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 cursor-pointer font-semibold text-sm transition-all
                         ${
-                          category === value
+                          isVeg === value
                             ? color === "emerald"
                               ? "border-emerald-400 bg-emerald-50 text-emerald-700"
                               : "border-red-400 bg-red-50 text-red-600"
@@ -379,16 +411,62 @@ function OwnerMenu() {
                     >
                       <input
                         type="radio"
-                        name="category"
+                        name="isVeg"
                         value={value}
-                        checked={category === value}
-                        onChange={(e) => setCategory(e.target.value)}
+                        checked={isVeg === value}
+                        onChange={() => setIsVeg(value)}
                         className="hidden"
                       />
                       {label}
                     </label>
                   ))}
                 </div>
+              </div>
+
+              {/* Food category */}
+              <div>
+                <label className={labelCls}>Food category</label>
+                <input
+                  type="text"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="e.g. pizza, burger, dessert"
+                  required
+                  className={inputCls}
+                />
+              </div>
+
+              <div>
+                <label className={labelCls}>Spice level</label>
+                <select value={spiceLevel} onChange={(e) => setSpiceLevel(e.target.value)} className={inputCls}>
+                  <option value="mild">Mild</option>
+                  <option value="medium">Medium</option>
+                  <option value="spicy">Spicy</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={labelCls}>Description <span className="text-gray-400 normal-case tracking-normal">(max 300 characters)</span></label>
+                <textarea value={description} maxLength={300} onChange={(e) => setDescription(e.target.value)} rows={3} className={inputCls} placeholder="Describe this dish..." />
+                <div className="mt-3">
+                  <MenuDescriptionGenerator
+                    name={name}
+                    category={category}
+                    price={price}
+                    isVeg={isVeg}
+                    onApply={applyAIGeneration}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Tags <span className="text-gray-400 normal-case tracking-normal">(comma separated, max 8)</span></label>
+                <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} className={inputCls} placeholder="bestseller, crispy, chef special" />
+              </div>
+
+              <div>
+                <label className={labelCls}>Allergens <span className="text-gray-400 normal-case tracking-normal">(comma separated, max 8)</span></label>
+                <input type="text" value={allergens} onChange={(e) => setAllergens(e.target.value)} className={inputCls} placeholder="dairy, nuts, gluten" />
               </div>
 
               {/* Price */}
@@ -609,7 +687,7 @@ function OwnerMenu() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xl">
-                          {item.category === "veg" ? "🥗" : "🍗"}
+                          {item.isVeg ? "🥗" : "🍗"}
                         </div>
                       )}
                     </div>
@@ -622,17 +700,16 @@ function OwnerMenu() {
                           className="w-3.5 h-3.5 rounded-sm flex items-center justify-center shrink-0"
                           style={{
                             background:
-                              item.category === "veg"
+                              item.isVeg
                                 ? "rgba(22,163,74,0.1)"
                                 : "rgba(239,68,68,0.08)",
-                            border: `1.5px solid ${item.category === "veg" ? "rgba(22,163,74,0.4)" : "rgba(239,68,68,0.3)"}`,
+                            border: `1.5px solid ${item.isVeg ? "rgba(22,163,74,0.4)" : "rgba(239,68,68,0.3)"}`,
                           }}
                         >
                           <span
                             className="w-1.5 h-1.5 rounded-full"
                             style={{
-                              background:
-                                item.category === "veg" ? "#16A34A" : "#EF4444",
+                              background: item.isVeg ? "#16A34A" : "#EF4444",
                             }}
                           />
                         </span>

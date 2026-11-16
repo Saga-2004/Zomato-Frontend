@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const EyeOpen = () => (
   <svg
@@ -36,6 +37,7 @@ const labelCls =
 
 export default function Register() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -59,6 +61,7 @@ export default function Register() {
         ...(form.phone && { phone: form.phone }),
       });
       localStorage.setItem("userInfo", JSON.stringify(user));
+      setUser(user);
       window.dispatchEvent(
         new CustomEvent("appToast", {
           detail: { message: "Account created! Welcome 🎉", type: "success" },

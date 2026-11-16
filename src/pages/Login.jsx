@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const FEATURES = [
   ["🚀", "30-min delivery", "Lightning fast to your door"],
@@ -38,6 +39,7 @@ const EyeClosed = () => (
 
 export default function Login() {
   const navigate = useNavigate();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -52,6 +54,7 @@ export default function Login() {
         password,
       });
       localStorage.setItem("userInfo", JSON.stringify(user));
+      setUser(user);
       if (user.isBlocked) {
         localStorage.removeItem("userInfo");
         window.dispatchEvent(

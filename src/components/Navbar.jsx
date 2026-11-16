@@ -2,6 +2,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import ProfileIcon from "./ProfileIcon";
 import API from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 
 const NavLink = ({ to, children, className = "" }) => (
   <Link
@@ -24,10 +25,7 @@ const MobileLink = ({ to, icon, children }) => (
 
 function Navbar() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(() => {
-    const userInfo = localStorage.getItem("userInfo");
-    return userInfo ? JSON.parse(userInfo) : null;
-  });
+  const { user, logout } = useAuth();
   const [cartCount, setCartCount] = useState(0);
   const [pincode, setPincode] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -81,7 +79,7 @@ function Navbar() {
       console.error("Failed to logout on server", err);
     }
     localStorage.removeItem("userInfo");
-    setUser(null);
+    await logout();
     navigate("/");
   };
 
