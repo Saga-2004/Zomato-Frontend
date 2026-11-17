@@ -3,6 +3,16 @@ import { Link, useLocation, useParams } from "react-router-dom";
 import API from "../api/axios";
 import Navbar from "../components/Navbar";
 
+function getComparablePrice(item) {
+  if (Number.isFinite(Number(item.price))) return Number(item.price);
+
+  const variantPrices = (item.variants || [])
+    .map((variant) => Number(variant.price))
+    .filter(Number.isFinite);
+
+  return variantPrices.length > 0 ? Math.min(...variantPrices) : null;
+}
+
 function RestaurantDetails() {
   const { id } = useParams();
   const location = useLocation();
@@ -13,7 +23,7 @@ function RestaurantDetails() {
   const [addingId, setAddingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [restaurantLoading, setRestaurantLoading] = useState(!restaurant);
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedDietary, setSelectedDietary] = useState("All");
   const [sortOrder, setSortOrder] = useState("");
   const [ratingValue, setRatingValue] = useState(0);
   const [submittingRating, setSubmittingRating] = useState(false);
@@ -33,7 +43,7 @@ function RestaurantDetails() {
     API.get(`/menu/${id}`)
       .then((r) => {
         setMenuItems(r.data);
-        setSelectedCategory("All");
+        setSelectedDietary("All");
         setSortOrder("");
       })
       .catch(console.error)
@@ -116,16 +126,25 @@ function RestaurantDetails() {
 
   const filteredItems = menuItems
     .filter(
-      (i) => selectedCategory === "All" || i.category === selectedCategory,
+      (i) =>
+        selectedDietary === "All" ||
+        (selectedDietary === "veg" ? i.isVeg === true : i.isVeg === false),
     )
     .slice()
-    .sort((a, b) =>
-      sortOrder === "asc"
-        ? a.price - b.price
-        : sortOrder === "desc"
-          ? b.price - a.price
-          : 0,
-    );
+    .sort((a, b) => {
+      if (!sortOrder) return 0;
+
+      const aPrice = getComparablePrice(a);
+      const bPrice = getComparablePrice(b);
+
+      // Keep items without a usable price at the end in either direction.
+      if (aPrice === null || bPrice === null) {
+        if (aPrice === null && bPrice === null) return 0;
+        return aPrice === null ? 1 : -1;
+      }
+
+      return sortOrder === "asc" ? aPrice - bPrice : bPrice - aPrice;
+    });
 
   const categories = Array.from(new Set(filteredItems.map((i) => i.category)));
 
@@ -315,8 +334,8 @@ function RestaurantDetails() {
               Filter:
             </span>
             <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              value={selectedDietary}
+              onChange={(e) => setSelectedDietary(e.target.value)}
               className="bg-white border border-[#EDE8DF] rounded-xl px-3 py-2 text-sm font-semibold text-[#4A3F34] outline-none focus:border-red-400 focus:ring-2 focus:ring-red-50 cursor-pointer shadow-sm transition appearance-none pr-7"
               style={{
                 backgroundImage:
@@ -379,8 +398,8 @@ function RestaurantDetails() {
               No items found
             </p>
             <p className="text-sm text-gray-400">
-              {selectedCategory !== "All"
-                ? `No ${selectedCategory} items available.`
+              {selectedDietary !== "All"
+                ? `No ${selectedDietary} items available.`
                 : "No menu items available."}
             </p>
           </div>
@@ -428,17 +447,17 @@ function RestaurantDetails() {
                             className="w-4 h-4 rounded-sm flex items-center justify-center shrink-0"
                             style={{
                               background:
-                                item.category === "veg"
+                                item.isVeg
                                   ? "rgba(22,163,74,0.1)"
                                   : "rgba(232,57,74,0.08)",
-                              border: `1.5px solid ${item.category === "veg" ? "rgba(22,163,74,0.45)" : "rgba(232,57,74,0.35)"}`,
+                              border: `1.5px solid ${item.isVeg ? "rgba(22,163,74,0.45)" : "rgba(232,57,74,0.35)"}`,
                             }}
                           >
                             <span
                               className="w-1.5 h-1.5 rounded-full"
                               style={{
                                 background:
-                                  item.category === "veg"
+                                  item.isVeg
                                     ? "#16A34A"
                                     : "#E8394A",
                               }}
