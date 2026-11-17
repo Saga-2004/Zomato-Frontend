@@ -25,6 +25,7 @@ function RestaurantDetails() {
   const [restaurantLoading, setRestaurantLoading] = useState(!restaurant);
   const [selectedDietary, setSelectedDietary] = useState("All");
   const [sortOrder, setSortOrder] = useState("");
+  const [highlightedItemId, setHighlightedItemId] = useState(null);
   const [ratingValue, setRatingValue] = useState(0);
   const [submittingRating, setSubmittingRating] = useState(false);
 
@@ -49,6 +50,25 @@ function RestaurantDetails() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    const targetId = location.state?.highlightMenuItemId;
+    if (!targetId || menuItems.length === 0) return undefined;
+
+    const target = menuItems.find(
+      (item) => String(item._id) === String(targetId),
+    );
+    if (!target) return undefined;
+
+    setHighlightedItemId(String(target._id));
+    const scrollTimer = window.setTimeout(() => {
+      document
+        .getElementById(`menu-item-${target._id}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+
+    return () => window.clearTimeout(scrollTimer);
+  }, [location.state, menuItems]);
 
   useEffect(() => {
     if (restaurant) {
@@ -426,7 +446,12 @@ function RestaurantDetails() {
                   .map((item, idx) => (
                     <div
                       key={item._id}
-                      className="bg-white border border-[#EDE8DF] hover:border-[#DDD8CE] rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-[fadeUp_0.35s_ease_both] flex-wrap sm:flex-nowrap"
+                      id={`menu-item-${item._id}`}
+                      className={`bg-white border rounded-2xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 animate-[fadeUp_0.35s_ease_both] flex-wrap sm:flex-nowrap ${
+                        highlightedItemId === String(item._id)
+                          ? "border-red-400 ring-2 ring-red-100"
+                          : "border-[#EDE8DF] hover:border-[#DDD8CE]"
+                      }`}
                       style={{ animationDelay: `${Math.min(idx * 40, 250)}ms` }}
                     >
                       <img

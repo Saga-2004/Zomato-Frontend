@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import API from "../api/axios";
 import Navbar from "../components/Navbar";
 import RestaurantCard, {
@@ -251,10 +251,14 @@ export default function Home() {
                     typeof item.price === "number"
                       ? item.price
                       : item.variants?.[0]?.price || 0;
+                  const itemId = item.menuItemId || item._id;
                   return (
-                    <div
-                      key={item._id}
-                      className="bg-white rounded-2xl border border-gray-100 p-4 flex gap-4 items-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+                    <Link
+                      key={itemId}
+                      to={`/restaurant/${item.restaurantId}`}
+                      state={{ highlightMenuItemId: itemId }}
+                      className="block bg-white rounded-2xl border border-gray-100 p-4 flex gap-4 items-center shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+                      aria-label={`View ${item.name} at ${item.restaurantName || "restaurant"}`}
                     >
                       <img
                         src={item.image}
@@ -266,11 +270,11 @@ export default function Home() {
                           {item.name}
                         </p>
                         <p className="text-xs text-gray-400 truncate">
-                          {item.restaurant?.restaurant_name || "Restaurant"}
+                          {item.restaurantName || "Restaurant"}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">₹{price}</p>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
